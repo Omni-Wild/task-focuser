@@ -1,0 +1,21 @@
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+
+# IDE / tooling
+.vscode/
+.idea/
+.claude/
+
+# OS
+Thumbs.db
+.DS_Store
