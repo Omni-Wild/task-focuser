@@ -1,0 +1,54 @@
+[package]
+name = "task-focuser-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Desktop operating-system integration for Task Focuser"
+
+[lints]
+workspace = true
+
+[dependencies]
+directories = "6.0.0"
+fs2 = "0.4.3"
+ico = "0.5"
+interprocess = { version = "2.2", features = ["tokio"] }
+rodio = { version = "0.21", default-features = false, features = ["playback"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+task-focuser-core = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }
+tracing = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ksni = "0.3"
+x11rb = { version = "0.13", features = ["randr", "shape", "xfixes"] }
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+futures-util = "0.3"
+zbus = { version = "5.19", default-features = false, features = ["tokio"] }
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+crossbeam-channel = "0.5"
+tray-icon = "0.21"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+widestring = "1"
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_LibraryLoader", "Win32_System_RemoteDesktop", "Win32_System_Threading", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+winreg = "0.56.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2 = "0.6"
+objc2-app-kit = "0.3"
+objc2-foundation = "0.3"
+
+[target."cfg(unix)".dependencies]
+libc = "0.2.191"
+
+[dev-dependencies]
+tempfile.workspace = true

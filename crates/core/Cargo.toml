@@ -1,0 +1,17 @@
+[package]
+name = "task-focuser-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "State, geometry, and behavior for Task Focuser"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["arbitrary_precision", "raw_value"] }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
