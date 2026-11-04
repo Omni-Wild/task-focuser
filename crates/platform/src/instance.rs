@@ -301,11 +301,35 @@ fn endpoint(directory: &Path, key: &str) -> io::Result<PathBuf> {
 fn create_listener(endpoint: &Path) -> io::Result<Listener> {
     #[cfg(unix)]
     {
-        use interprocess::os::unix::local_socket::ListenerOptionsExt;
-        ListenerOptions::new()
-            .name(endpoint.to_fs_name::<GenericFilePath>()?)
-            .mode(0o600)
-            .create_tokio()
+        let options = ListenerOptions::new().name(endpoint.to_fs_name::<GenericFilePath>()?);
+        #[cfg(target_os = "macos")]
+        {
+            use std::os::unix::fs::{MetadataExt, PermissionsExt};
+            let parent = endpoint.parent().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "the command socket has no parent directory",
+                )
+            })?;
+            let metadata = fs::symlink_metadata(parent)?;
+            if !metadata.is_dir() || metadata.uid() != current_uid() || metadata.mode() & 0o077 != 0
+            {
+                return Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    "the command socket requires a current-user directory with mode 0700",
+                ));
+            }
+            // macOS cannot fchmod an unbound socket, which mode() requires. The
+            // verified private parent excludes other users before the post-bind chmod.
+            let listener = options.create_tokio()?;
+            fs::set_permissions(endpoint, fs::Permissions::from_mode(0o600))?;
+            Ok(listener)
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            use interprocess::os::unix::local_socket::ListenerOptionsExt;
+            options.mode(0o600).create_tokio()
+        }
     }
     #[cfg(windows)]
     {
@@ -440,6 +464,36 @@ fn session_id() -> io::Result<String> {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    #[test]
+    fn listener_socket_has_owner_only_permissions() {
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+        let directory = tempfile::tempdir().expect("test directory");
+        runtime().expect("runtime").block_on(async {
+            let path = directory.path().join("private.sock");
+            let listener = create_listener(&path).expect("private listener");
+            let metadata = fs::symlink_metadata(&path).expect("socket metadata");
+            assert_eq!(metadata.uid(), current_uid());
+            assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
+            drop(listener);
+        });
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn post_bind_permissions_require_a_private_parent() {
+        use std::os::unix::fs::PermissionsExt;
+        let directory = tempfile::tempdir().expect("test directory");
+        fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o755))
+            .expect("make only the test directory searchable");
+        runtime().expect("runtime").block_on(async {
+            let path = directory.path().join("not-private.sock");
+            let error = create_listener(&path)
+                .expect_err("nonprivate parent must be rejected before binding");
+            assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+            assert!(!path.exists());
+        });
+    }
+
     #[test]
     fn a_stalled_client_cannot_delay_shutdown() {
         let directory = tempfile::tempdir().expect("test directory");

@@ -176,7 +176,8 @@ class NativeTest:
     def start(self):
         config = self.directory / "sway.conf"
         config.write_text("output HEADLESS-1 mode 1280x800\n"
-                          "xwayland disable\nseat seat0 fallback true\n")
+                          "xwayland disable\nseat seat0 fallback true\n"
+                          "seat seat0 hide_cursor 1\n")
         sway = self.spawn("sway", "sway", "--unsupported-gpu", "-c", str(config))
         socket = wait_for("isolated Sway IPC", lambda: next(self.runtime.glob("sway-ipc*.sock"), None), [sway])
         self.env["SWAYSOCK"] = str(socket)
@@ -184,11 +185,13 @@ class NativeTest:
             (path for path in self.runtime.glob("wayland-*") if path.is_socket()), None), [sway])
         self.env["WAYLAND_DISPLAY"] = wayland.name
         self.run("swaymsg", "-r", "-t", "get_outputs")
+        # Sway versions differ in their empty-output color. Set it explicitly.
+        self.spawn("background", "swaybg", "--color", "000000")
         self.attach_pointer()
         # Keep the virtual pointer away from controls and screenshot assertions.
         self.move_cursor(1200, 700)
-        if self.screenshot("00-empty") != 0:
-            raise RuntimeError("The isolated output's initial background is not black")
+        wait_for("black background with hidden test cursor", lambda: self.screenshot("00-empty") == 0,
+                 self.processes, timeout=5)
         self.data.joinpath("state.native-a.json").write_text(json.dumps({
             "version": 2, "text": "Native initial text", "x": 100, "y": 100,
             "mode": "note", "locked": False, "soundOn": False,
@@ -360,7 +363,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("binary", type=Path)
     args = parser.parse_args()
-    for command in ("sway", "swaymsg", "grim", "wtype", "cc", "pkg-config", "wayland-scanner"):
+    for command in ("sway", "swaymsg", "swaybg", "grim", "wtype", "cc", "pkg-config", "wayland-scanner"):
         if not shutil.which(command):
             parser.error(f"Missing native-test dependency: {command}")
     binary = args.binary.resolve()
