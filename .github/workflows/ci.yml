@@ -23,7 +23,6 @@ jobs:
     env:
       CI: true
       CARGO_BUILD_JOBS: 2
-      TASKFOCUSER_DATA_DIR: ${{ runner.temp }}/task-focuser-ci
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install Linux dependencies
@@ -42,6 +41,8 @@ jobs:
       - name: Check lints
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Run tests
+        env:
+          TASKFOCUSER_DATA_DIR: ${{ runner.temp }}/task-focuser-ci
         run: cargo test --locked --workspace
       - name: Build native test binary
         if: runner.os == 'Linux'
