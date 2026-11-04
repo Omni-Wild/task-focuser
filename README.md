@@ -4,6 +4,8 @@ A post-it note taped to your monitor. One always-on-top sticky with the one to t
 
 Windows 10/11, one `.exe`, no installer, no account, no network. MIT licensed.
 
+<p align="center"><img src="docs/demo.gif" width="360" alt="Task Focuser in action: the dot, the note, the bird, the owl"></p>
+
 ## Download and run
 
 1. Go to the [latest release](../../releases/latest) and download **`TaskFocuser.exe`** (about 70 MB, everything included).
