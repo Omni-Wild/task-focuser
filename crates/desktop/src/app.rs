@@ -37,6 +37,7 @@ pub enum Message {
     Monitors(Vec<Monitor>),
     HostMoved(SurfaceRole, Point),
     FocusEditor,
+    ResetEditorScroll(u64),
     Command(Command),
     Edit(text_editor::Action),
     Undo(bool),
@@ -233,6 +234,7 @@ pub struct App {
     pub(crate) close_target: Option<DragTarget>,
     cursors: BTreeMap<SurfaceRole, Point>,
     gesture: Option<Gesture>,
+    editor_scroll_generation: u64,
     save_generation: u64,
     saved_generation: u64,
     pub(crate) error: Option<String>,
@@ -303,6 +305,7 @@ impl App {
             close_target: None,
             cursors: BTreeMap::new(),
             gesture: None,
+            editor_scroll_generation: 0,
             save_generation: 0,
             saved_generation: 0,
             error: (!diagnostics.is_empty()).then_some(diagnostics),
@@ -405,6 +408,11 @@ impl App {
                 if role == SurfaceRole::Note && !self.state().locked && self.gesture.is_none() {
                     changes.push(SurfaceChange::Focus(SurfaceRole::Note));
                     tasks.push(delay(Duration::from_millis(15), Message::FocusEditor));
+                    self.editor_scroll_generation += 1;
+                    tasks.push(delay(
+                        Duration::from_millis(50),
+                        Message::ResetEditorScroll(self.editor_scroll_generation),
+                    ));
                 }
             }
             Message::FocusEditor
@@ -414,6 +422,13 @@ impl App {
                     && self.gesture.is_none() =>
             {
                 tasks.push(self.focus_editor());
+            }
+            Message::ResetEditorScroll(generation)
+                if generation == self.editor_scroll_generation
+                    && self.state().mode == Mode::Note
+                    && !self.state().locked =>
+            {
+                self.reset_editor_scroll();
             }
             Message::HostMoved(role, position) => {
                 if let Some(bounds) = self.surfaces.get_mut(&role) {
@@ -532,6 +547,15 @@ impl App {
                 }
                 Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                     changed |= self.end_gesture(&mut changes, true);
+                }
+                Event::Window(window::Event::Resized(_)) if role == SurfaceRole::Note => {
+                    // The compositor has applied the new viewport. Reset after its widget layout,
+                    // rather than allowing the old small viewport to scroll to the caret again.
+                    self.editor_scroll_generation += 1;
+                    tasks.push(delay(
+                        Duration::from_millis(50),
+                        Message::ResetEditorScroll(self.editor_scroll_generation),
+                    ));
                 }
                 Event::Window(window::Event::Focused)
                     if role == SurfaceRole::Note
@@ -1640,7 +1664,6 @@ mod tests {
             Wrapping::WordOrGlyph,
             &mut highlighter,
         );
-        let cursor = editor.cursor();
         editor.update(
             iced::Size::new(width, full_height),
             font,
@@ -1653,6 +1676,30 @@ mod tests {
             editor.buffer().scroll().vertical > 0.,
             "native editor retained its smaller viewport offset"
         );
+        // A configure can briefly leave the native widget at its previous small viewport.
+        editor.perform(text_editor::Action::Select(text_editor::Motion::Left));
+        editor.perform(editor_scroll_to_top(&text));
+        editor.update(
+            iced::Size::new(width, 18.),
+            font,
+            iced::Pixels(size),
+            LineHeight::Relative(1.2),
+            Wrapping::WordOrGlyph,
+            &mut highlighter,
+        );
+        editor.update(
+            iced::Size::new(width, full_height),
+            font,
+            iced::Pixels(size),
+            LineHeight::Relative(1.2),
+            Wrapping::WordOrGlyph,
+            &mut highlighter,
+        );
+        assert!(
+            editor.buffer().scroll().vertical > 0.,
+            "a reset before configure can be undone by cursor visibility"
+        );
+        let cursor = editor.cursor();
         editor.perform(editor_scroll_to_top(&text));
         editor.update(
             iced::Size::new(width, full_height),
