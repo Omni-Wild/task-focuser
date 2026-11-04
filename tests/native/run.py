@@ -186,7 +186,8 @@ class NativeTest:
         self.env["WAYLAND_DISPLAY"] = wayland.name
         self.run("swaymsg", "-r", "-t", "get_outputs")
         # Sway versions differ in their empty-output color. Set it explicitly.
-        self.spawn("background", "swaybg", "--color", "000000")
+        # Older swaybg releases require the leading '#' in the color.
+        self.spawn("background", "swaybg", "--color", "#000000")
         self.attach_pointer()
         # Keep the virtual pointer away from controls and screenshot assertions.
         self.move_cursor(1200, 700)

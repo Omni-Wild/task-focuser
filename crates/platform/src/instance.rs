@@ -464,13 +464,25 @@ fn session_id() -> io::Result<String> {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+
+    fn private_socket_directory() -> (tempfile::TempDir, PathBuf) {
+        // tempfile directories use the process's default permissions. Exercise the
+        // same explicit private-directory setup as production before binding.
+        let temporary = tempfile::tempdir().expect("test directory");
+        let directory = temporary.path().join("ipc");
+        private_directory(&directory).expect("private socket directory");
+        (temporary, directory)
+    }
     #[test]
     fn listener_socket_has_owner_only_permissions() {
         use std::os::unix::fs::{MetadataExt, PermissionsExt};
-        let directory = tempfile::tempdir().expect("test directory");
+        let (_temporary, directory) = private_socket_directory();
         runtime().expect("runtime").block_on(async {
-            let path = directory.path().join("private.sock");
+            let path = directory.join("private.sock");
             let listener = create_listener(&path).expect("private listener");
+            let parent = fs::symlink_metadata(&directory).expect("private parent metadata");
+            assert_eq!(parent.uid(), current_uid());
+            assert_eq!(parent.permissions().mode() & 0o777, 0o700);
             let metadata = fs::symlink_metadata(&path).expect("socket metadata");
             assert_eq!(metadata.uid(), current_uid());
             assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
@@ -496,9 +508,9 @@ mod tests {
 
     #[test]
     fn a_stalled_client_cannot_delay_shutdown() {
-        let directory = tempfile::tempdir().expect("test directory");
+        let (_temporary, directory) = private_socket_directory();
         runtime().expect("runtime").block_on(async {
-            let path = directory.path().join("stall.sock");
+            let path = directory.join("stall.sock");
             let listener = create_listener(&path).expect("listener");
             let (sender, _receiver) = mpsc::sync_channel(1);
             let (stop, stopped) = oneshot::channel();
@@ -515,9 +527,9 @@ mod tests {
     }
     #[test]
     fn oversized_and_invalid_messages_do_not_stop_the_listener() {
-        let directory = tempfile::tempdir().expect("test directory");
+        let (_temporary, directory) = private_socket_directory();
         runtime().expect("runtime").block_on(async {
-            let path = directory.path().join("bad.sock");
+            let path = directory.join("bad.sock");
             let listener = create_listener(&path).expect("listener");
             let (sender, receiver) = mpsc::sync_channel(1);
             let (stop, stopped) = oneshot::channel();
