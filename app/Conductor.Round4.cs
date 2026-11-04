@@ -10,8 +10,10 @@ namespace TaskFocuser;
 /// </summary>
 public sealed partial class Conductor
 {
-    // 2.3: a 20 % chance per key outside a chain, a chain of 2 to 30 characters, ended by 5 s without a key.
-    const double ChainChance = 0.2;
+    // 2.3 had a 20 % chance per key outside a chain; since the demo of 2026-11-04 (his word after watching it:
+    // the bird should peck along every time) a key outside a chain always starts one (SPEC 9.8). The chain
+    // length and the 5 s timeout stay, so a pause still ends it and the next key starts afresh.
+    const double ChainChance = 1.0;
     const int ChainMin = 2, ChainMaxExclusive = 31;   // Random.Next's upper bound is exclusive: 30 is included
     const int ChainIdleMs = 5000;
 
