@@ -1,0 +1,44 @@
+<Window x:Class="TaskFocuser.Views.DotWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Task Focuser dot" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" ShowActivated="False" Focusable="False"
+        WindowStartupLocation="Manual" Width="96" Height="96" Cursor="Hand"
+        ToolTip="Task Focuser: double-click to pop the note out" ToolTipService.InitialShowDelay="700">
+    <!-- Everything is drawn at the resting size (18 DIP disc); SizeScale carries the armed and hot looks,
+         FxScale the entrances, squashes and exits, so the two never fight over one property. -->
+    <Grid x:Name="Body" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+            <TransformGroup>
+                <ScaleTransform x:Name="SizeScale" ScaleX="1" ScaleY="1" />
+                <ScaleTransform x:Name="FxScale" ScaleX="1" ScaleY="1" />
+            </TransformGroup>
+        </Grid.RenderTransform>
+
+        <!-- The hand-sized target the old glow used to give: the flat disc alone is 18 DIP, too small to grab
+             or double-click comfortably. Alpha 1/255 of a mid grey moves no backdrop by more than one level (invisible)
+             yet still catches the mouse, which a fully transparent pixel of a layered window passes through. -->
+        <Ellipse x:Name="HitArea" Width="40" Height="40" Fill="#01808080" />
+
+        <!-- SPEC-round3 2.4: almost no glow. A 2 DIP soft ring around the disc (22 DIP, the disc's edge at
+             radius 9/11 = 0.82), its strength set by the element's Opacity (0.12 resting, 0.20 armed or hot).
+             HaloFit shrinks it against SizeScale so the ring stays 2 DIP wide at the armed and hot sizes too. -->
+        <Ellipse x:Name="Halo" Width="22" Height="22" Opacity="0.12" IsHitTestVisible="False"
+                 RenderTransformOrigin="0.5,0.5">
+            <Ellipse.RenderTransform>
+                <ScaleTransform x:Name="HaloFit" ScaleX="1" ScaleY="1" />
+            </Ellipse.RenderTransform>
+            <Ellipse.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Offset="0" Color="#FFD32F2F" />
+                    <GradientStop Offset="0.80" Color="#FFD32F2F" />
+                    <GradientStop Offset="1" Color="#00D32F2F" />
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <!-- The flat badge: the notification red with a 1 DIP darker rim, no sheen, no gradient. Its Opacity
+             carries the resting breath (0.92 to 1.0). -->
+        <Ellipse x:Name="Disc" Width="18" Height="18" Fill="#D32F2F" Stroke="#A81E1E" StrokeThickness="1" />
+    </Grid>
+</Window>

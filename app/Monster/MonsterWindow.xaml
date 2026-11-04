@@ -1,0 +1,16 @@
+<Window x:Class="TaskFocuser.Monster.MonsterWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:m="clr-namespace:TaskFocuser.Monster"
+        Title="Task Focuser monster"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+        Focusable="False" SnapsToDevicePixels="True" UseLayoutRounding="True">
+    <!-- The window is larger than the sprite (sized in code) so hearts and dust have room; the sprite
+         sits centred on its bottom edge, which stays the feet line. Clicks reach only painted pixels:
+         a layered window passes clicks on transparent pixels through on its own. -->
+    <Grid>
+        <m:SpriteView x:Name="Sprite" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        <Canvas x:Name="FxLayer" IsHitTestVisible="False" />
+    </Grid>
+</Window>

@@ -1,0 +1,110 @@
+<UserControl x:Class="TaskFocuser.Views.BirdPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False" IsTabStop="False">
+    <!-- The bird picker (SPEC-round5 2.3): the content of the popup under the bar's perch slot. One row per bird,
+         built in code: the portrait and the name (a click switches), then the pencil (a click renames in place).
+         Only the rename box is focusable, and only while he renames; everything else leaves the caret in the note.
+         The styles live here and not in Theme.xaml: nothing else uses them, and Theme stays short. -->
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="TF.PickerInk" Color="#2B2A25" />
+        <SolidColorBrush x:Key="TF.PickerHover" Color="#2B2A25" Opacity="0.10" />
+        <SolidColorBrush x:Key="TF.PickerPress" Color="#2B2A25" Opacity="0.18" />
+
+        <!-- A bird's row: the whole stretch (portrait and name) is the switch; tinted like the bar's buttons. -->
+        <Style x:Key="TF.PickerRow" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{StaticResource TF.PickerInk}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Face" Background="Transparent" CornerRadius="4" Padding="4,3,4,3">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Background" Value="{StaticResource TF.PickerHover}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Face" Property="Background" Value="{StaticResource TF.PickerPress}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The pencil: a 14 DIP glyph at 60 % ink, full ink on hover, so it reads as a quiet second action. -->
+        <Style x:Key="TF.Pencil" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="ToolTip" Value="Rename" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Face" Background="Transparent" CornerRadius="4">
+                            <Path x:Name="Glyph" Width="14" Height="14" Stretch="None" Opacity="0.6"
+                                  Stroke="{StaticResource TF.PickerInk}" StrokeThickness="1.2"
+                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                                  Data="M 2.2,11.8 L 2.8,9.2 L 9.6,2.4 L 11.6,4.4 L 4.8,11.2 Z M 8.3,3.7 L 10.3,5.7 M 2.8,9.2 L 4.8,11.2" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Glyph" Property="Opacity" Value="1" />
+                                <Setter TargetName="Face" Property="Background" Value="{StaticResource TF.PickerHover}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Face" Property="Background" Value="{StaticResource TF.PickerPress}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The rename box: no system chrome, a thin edge whose colour the code sets (ink when the name is
+             valid, red-ish when it is too short), on a lighter scrap of paper so it reads as editable. -->
+        <Style x:Key="TF.RenameBox" TargetType="TextBox">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource TF.PickerInk}" />
+            <Setter Property="CaretBrush" Value="{StaticResource TF.PickerInk}" />
+            <Setter Property="SelectionBrush" Value="#4F8DFF" />
+            <Setter Property="SelectionOpacity" Value="0.32" />
+            <Setter Property="AcceptsReturn" Value="False" />
+            <Setter Property="AcceptsTab" Value="False" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="MaxLength" Value="14" />
+            <Setter Property="AllowDrop" Value="False" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="3"
+                                Background="#B3FFFDF6" Padding="3,1,3,1">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" Padding="0"
+                                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border x:Name="Box" BorderThickness="1" CornerRadius="6" Padding="4" Focusable="False">
+        <!-- A fixed width, so the popup does not jump when a name turns into the rename box or gets longer. -->
+        <StackPanel x:Name="Rows" Width="156" Focusable="False" />
+    </Border>
+</UserControl>

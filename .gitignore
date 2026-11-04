@@ -1,15 +1,8 @@
-# PyInstaller
-build/
+# .NET
+bin/
+obj/
 dist/
-*.spec
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-.venv/
-venv/
+*.user
 
 # IDE / tooling
 .vscode/

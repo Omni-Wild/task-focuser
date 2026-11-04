@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TaskFocuser</AssemblyName>
+    <RootNamespace>TaskFocuser</RootNamespace>
+    <ApplicationIcon Condition="Exists('Assets\monster.ico')">Assets\monster.ico</ApplicationIcon>
+    <ApplicationManifest Condition="Exists('app.manifest')">app.manifest</ApplicationManifest>
+    <Version>2.0.0</Version>
+    <Product>Task Focuser</Product>
+    <Authors>Jiri Kuldanek</Authors>
+    <Company>Jiri Kuldanek</Company>
+    <AssemblyTitle>Task Focuser</AssemblyTitle>
+    <Description>A post-it note for what you are focusing on now, with a pixel bird.</Description>
+    <Copyright>Copyright (c) 2026 Jiri Kuldanek. MIT License.</Copyright>
+    <!-- File properties show 2.0.0, not 2.0.0+commit-sha (the SDK appends the commit when built in a repo). -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <!-- Framework-dependent build: when no 9.x desktop runtime is installed, run on the next major one (10) instead of asking for 9 (.NET 9 support ends 2026-11-10). -->
+    <RollForward>Major</RollForward>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Invariant globalization is off: the TextBox caret looks up the input language on focus and throws without cultures (B2 found it). -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <TieredPGO>true</TieredPGO>
+    <!-- Published as one framework-dependent exe; see build.ps1. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms is on only for NotifyIcon and Screen; keep its namespaces out of the implicit usings
+         so Point, Application and Timer mean the WPF ones. Say System.Drawing explicitly where needed. -->
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\monster.ico" Condition="Exists('Assets\monster.ico')" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,70 @@
+<Window x:Class="TaskFocuser.Views.NoteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TaskFocuser.Views"
+        Title="Task Focuser" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" SizeToContent="Manual"
+        WindowStartupLocation="Manual" ShowActivated="False" UseLayoutRounding="True"
+        Width="544" Height="80">
+    <!-- The window is a transparent stage wider than the note; the paper sits on it at an offset the code
+         sets. Fully transparent pixels of a layered window let clicks through, so the spare width costs
+         nothing, and it lets the note grow sideways while typing without resizing the window. -->
+    <Canvas x:Name="Stage">
+        <Grid x:Name="NoteRoot" RenderTransformOrigin="1,0">
+            <Grid.RenderTransform>
+                <!-- The scale runs the pop and the squash; the shift is the lock/unlock shake (round 2). -->
+                <TransformGroup>
+                    <ScaleTransform x:Name="NoteScale" ScaleX="1" ScaleY="1" />
+                    <TranslateTransform x:Name="NoteShift" />
+                </TransformGroup>
+            </Grid.RenderTransform>
+
+            <!-- The shadow lives on its own layer under the paper so the text is never rendered through an effect. -->
+            <Border x:Name="Shadow" CornerRadius="6" Background="#FFF59E">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="3" Direction="270" Opacity="0.3"
+                                      Color="Black" RenderingBias="Performance" />
+                </Border.Effect>
+            </Border>
+
+            <!-- The paper and its grid are the never-clipping kinds (NoteWindow.Layout.cs, SPEC-round5 5): a
+                 compact locked note measured to its text once clipped the vines' overhang at the paper's edge. -->
+            <local:UnclippedBorder x:Name="Paper" CornerRadius="6" Background="#FFF59E" Cursor="Arrow">
+                <local:UnclippedGrid>
+                    <!-- The last row takes what a manual size (SPEC-round4 2.4) adds below the text, so the
+                         vines and the grip, which span all rows, still reach the paper's real bottom edge. -->
+                    <local:UnclippedGrid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </local:UnclippedGrid.RowDefinitions>
+
+                    <!-- The plants (SPEC-round3 2.5, SPEC-round4 2.2): the lowest layer above the paper fill, under
+                         the strip, the bar and the text. Stretched 15 DIP past the paper on the right and the bottom
+                         (the negative margin; a margin overflow is not clipped) with EdgeInset 15, so the stem runs on
+                         the paper's edge and half the leaves hang out into the stage, like the bird on the top edge.
+                         The text box has no background, so they show through between the lines. -->
+                    <local:VinesView x:Name="Vines" Grid.RowSpan="4" IsHitTestVisible="False"
+                                     Margin="0,0,-15,-15" EdgeInset="15" />
+
+                    <Border x:Name="Strip" Grid.Row="0" Height="6" CornerRadius="6,6,0,0" />
+
+                    <!-- The bar slides down out of the strip: bottom-aligned inside a clip whose height grows. -->
+                    <Border x:Name="BarClip" Grid.Row="1" Height="0" ClipToBounds="True">
+                        <local:SettingsBar x:Name="Bar" VerticalAlignment="Bottom" />
+                    </Border>
+
+                    <TextBox x:Name="Editor" Grid.Row="2" Style="{StaticResource TF.NoteText}"
+                             Margin="14,10,14,10" HorizontalAlignment="Left" VerticalAlignment="Top" />
+
+                    <!-- The resize corner (SPEC-round4 2.4): above the vines and the text, unlocked only.
+                         NoteWindow.Resize.cs runs its press, drag and click. -->
+                    <Border x:Name="Grip" Grid.RowSpan="4" Style="{StaticResource TF.ResizeGrip}">
+                        <Path Style="{StaticResource TF.ResizeGripLines}" />
+                    </Border>
+                </local:UnclippedGrid>
+            </local:UnclippedBorder>
+        </Grid>
+    </Canvas>
+</Window>
