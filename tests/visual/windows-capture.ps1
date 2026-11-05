@@ -23,15 +23,15 @@ public static class CaptureWindows {
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out Rect rect);
     [DllImport("user32.dll")] static extern int GetWindowText(IntPtr h, StringBuilder text, int max);
     [DllImport("user32.dll")] public static extern uint GetDpiForSystem();
-    public static string[] Describe(uint processId) {
+    public static string[] Describe(uint processId, bool noteOnly) {
         var lines = new List<string>();
         EnumWindows((h, p) => {
             uint id; GetWindowThreadProcessId(h, out id);
             if (id == processId && IsWindowVisible(h)) {
                 Rect r; GetWindowRect(h, out r);
-                if (r.Right <= r.Left || r.Bottom <= r.Top) return true;
                 var title = new StringBuilder(512);
                 GetWindowText(h, title, title.Capacity);
+                if (noteOnly && (r.Right-r.Left < 50 || r.Bottom-r.Top < 30 || title.ToString() != "Task Focuser")) return true;
                 lines.Add(String.Format("{0}: {1},{2} {3}x{4} {5}", h, r.Left, r.Top, r.Right-r.Left, r.Bottom-r.Top, title));
             }
             return true;
@@ -89,7 +89,7 @@ $form.TopMost = $true
 '@
 $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($backgroundCode))
 $background = Start-Process powershell.exe -ArgumentList '-NoProfile', '-STA', '-EncodedCommand', $encoded -PassThru
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 5
 if ($background.HasExited) { throw 'Could not start the isolated black background' }
 $metadata = @("Original commit: 67b0db11394ae1b265f11bfe013bea4631f8a9c8", "System DPI: $([CaptureWindows]::GetDpiForSystem())", "Virtual screen: $([System.Windows.Forms.SystemInformation]::VirtualScreen)", "Capture: GDI desktop composition, full virtual screen", "Original state: $originalState", "Rust state: $rustState")
 $metadata += "Windows: $([Environment]::OSVersion.VersionString)"
@@ -126,11 +126,13 @@ try {
                 for ($i = 0; $i -lt 100 -and $windows.Count -eq 0; $i++) {
                     Start-Sleep -Milliseconds 100
                     if ($process.HasExited) { throw "$app exited before its window appeared: $($process.ExitCode)" }
-                    $windows = @([CaptureWindows]::Describe($process.Id))
+                    $windows = @([CaptureWindows]::Describe($process.Id, $true))
                 }
                 if ($windows.Count -eq 0) {
                     Save-Screen $after
-                    throw "$app has no visible, nonempty window in the runner desktop; inspect the screenshot"
+                    $allWindows = @([CaptureWindows]::Describe($process.Id, $false))
+                    Add-Content (Join-Path $OutputDir 'metadata.txt') "$case $app all visible windows: $($allWindows -join '; ')"
+                    throw "$app has no visible Task Focuser window of at least 50x30; inspect the screenshot"
                 }
                 Start-Sleep -Seconds 3
                 Save-Screen $after
