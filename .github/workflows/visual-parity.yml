@@ -1,6 +1,7 @@
 name: Windows visual parity capture
 
 on:
+  pull_request:
   push:
   workflow_dispatch:
 

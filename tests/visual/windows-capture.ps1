@@ -8,6 +8,7 @@ Set-StrictMode -Version Latest
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationCore
 Add-Type @'
 using System;
 using System.Collections.Generic;
@@ -92,6 +93,10 @@ Start-Sleep -Seconds 2
 if ($background.HasExited) { throw 'Could not start the isolated black background' }
 $metadata = @("Original commit: 67b0db11394ae1b265f11bfe013bea4631f8a9c8", "System DPI: $([CaptureWindows]::GetDpiForSystem())", "Virtual screen: $([System.Windows.Forms.SystemInformation]::VirtualScreen)", "Capture: GDI desktop composition, full virtual screen", "Original state: $originalState", "Rust state: $rustState")
 $metadata += "Windows: $([Environment]::OSVersion.VersionString)"
+foreach ($fontName in @('Segoe UI', 'Segoe Print', 'Comic Sans MS', 'Cascadia Code')) {
+    $family = [System.Windows.Media.FontFamily]::new($fontName)
+    $metadata += "WPF font $fontName baseline=$($family.Baseline) lineSpacing=$($family.LineSpacing) lineHeight16=$($family.LineSpacing * 16)"
+}
 $metadata += "Fonts: $(([System.Drawing.FontFamily]::Families | ForEach-Object Name) -join ', ')"
 $metadata | Set-Content (Join-Path $OutputDir 'metadata.txt')
 try {
