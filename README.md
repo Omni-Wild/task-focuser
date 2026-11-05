@@ -1,60 +1,41 @@
 # Task Focuser
 
-A post-it note taped to your monitor. One always-on-top sticky with the one to three lines you are focusing on right now, a lock so you cannot type into it by accident, a red dot in the corner to tuck it away, and a small pixel bird that keeps you company and keeps your Bluetooth headphones awake.
+Task Focuser is a small floating note for the one to three lines you are focusing on. Lennie the budgie and Meggie the owl keep it company. The Rust app runs on Windows, macOS, and Linux.
 
-Windows 10/11, one `.exe`, no installer, no account, no network. MIT licensed.
+<p align="center"><img src="docs/demo.gif" width="360" alt="The original Task Focuser note and bird"></p>
 
-<p align="center"><img src="docs/demo.gif" width="360" alt="Task Focuser in action: the dot, the note, the bird, the owl"></p>
+See [migration notes](docs/RUST-MIGRATION.md) for state compatibility, paths, and platform limitations. The demo shows the original Windows app.
 
-## Download and run
+## Use the note
 
-1. Go to the [latest release](../../releases/latest) and download **`TaskFocuser.exe`** (about 70 MB, everything included).
-   If you already have the .NET 9 or 10 Desktop Runtime, `TaskFocuser-lite.exe` (under 1 MB) does the same.
-2. Put it in a folder you will keep (for example `Documents\TaskFocuser`), not in `Downloads`, because "Start with Windows" remembers where the exe is.
-3. Double-click it. The exe is not code-signed, so Windows SmartScreen says "Windows protected your PC" the first time: click **More info**, then **Run anyway**. That happens once. Your browser may also ask whether to keep the download; keep it. If your PC has Smart App Control turned on, it blocks unsigned apps outright and you would have to turn that off in Windows Security.
-4. The note appears. Type into it. Everything is saved as you type.
+Double-click the locked note to edit it. Press `Esc` or `Ctrl+L`, or click the padlock, to lock it again. While editing, use `Ctrl+=` and `Ctrl+-` to change the font size. On macOS, use the Command key in place of Ctrl.
 
-To have it start with Windows: right-click the bird icon in the tray (under the `^` arrow at the bottom right of the taskbar) and tick **Start with Windows**. If you later move the exe, the app repoints the autostart to the new place the next time you run it.
+Drag the note to move it. Drop it on the dot at the top of the screen to tuck it away, then double-click the dot to restore it. Drag the dot to the close target to hide both. The tray menu can show the note again or quit the app.
 
-## How to use it
+The editing bar controls the note's appearance, bird, and sound. Click the bird's name to choose Lennie or Meggie or rename them. Click the sound control to toggle sound, or hover over it to adjust volume and idle sounds. The bird's quiet idle sounds can keep Bluetooth headphones awake during silent stretches.
 
-- **Locked** (the resting state): the text cannot be changed and the note never takes the keyboard away from the app you are working in. Drag it anywhere. **Double-click it to unlock.**
-- **Unlocked**: the settings bar appears on top and the bird lands on it. Type freely, Enter makes a new line. Lock it again with the padlock, `Esc` or `Ctrl+L`, or double-click an empty spot of the bar.
-- **The bar**, left to right: the cucumber (drag it onto the bird), bird stays when locked, bird opacity, sound (click = on/off, hover = volume and how often the bird makes idle sounds), the colours, the opacity slider, `- f +` (font size, `f` cycles the font), the plants, the padlock. Under the bird: its name, which opens the bird picker.
-- **Font size**: `Ctrl+=` / `Ctrl+-` (11 to 28).
-- **Size**: the note grows to the left and down as you type. Drag the bottom-right corner to set a minimum size; click the corner once to go back to auto-size.
-- **The dot**: start dragging the note and a red dot appears in the top-right corner of the monitor. Drop the note on it and the note tucks into the dot. Double-click the dot to pop the note back out. The dot remembers where you last left it.
-- **Closing**: drag the dot and a dark X appears in the bottom-right corner. Drop the dot on it and everything is hidden; only the tray icon stays. Left-click the tray icon to get the note back.
-- **The tray menu**: Show note, Tuck into the dot, Start the dot, Lock/Unlock, Start with Windows, Quit.
+## Build and run
 
-## The bird
+Install Rust with [rustup](https://rustup.rs/). The repository selects Rust 1.94.0 through `rust-toolchain.toml`. On Ubuntu, install the native development libraries first:
 
-Two birds live in the app: **Lennie** the budgie and **Meggie** the owl. Click the name under the bird to switch, or rename them. The bird sits on the bar while you edit, flies off when you lock (or stays, if you tell it to), carries the note when you drag it, loses its grip if you yank it, and now and then blinks, preens, walks along the edge or pecks seeds. Click it and it hops; bug it five times and it flies off for a second.
-
-**The sound.** Every five minutes the bird makes a quiet chirp. That keeps Bluetooth headphones from going to sleep during long silent stretches, which is why the feature exists. Hover over the speaker on the bar to set the volume (the default is 10 %) and whether the idle sounds are a chirp, a feather ruffle or both, and how often. Click the speaker to turn all sound off. Sound needs Windows Media Player, which Windows includes; on a Windows "N" edition install the Media Feature Pack, otherwise the bird is simply silent.
-
-## Where your note lives
-
-`%APPDATA%\Task Focuser\state.json` holds the text, position, colour, opacity, font, lock state and the bird settings. Delete the file to start from scratch. The generated sounds are cached in `%LOCALAPPDATA%\Task Focuser\sounds`.
-
-## Command line
-
-Only one Task Focuser runs. Starting the exe again with a switch sends it to the running one: `--show`, `--lock`, `--unlock`, `--dot`, `--close`, `--start`, `--quit`. Example: `TaskFocuser.exe --dot`.
-
-## Build it yourself
-
-You need the .NET 9 SDK.
-
-```
-powershell -ExecutionPolicy Bypass -File app\build.ps1 -SelfContained
+```sh
+sudo apt-get install pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev libfontconfig1-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
 ```
 
-That produces `app\dist\TaskFocuser.exe`. Without `-SelfContained` you get the small framework-dependent exe. `app\install.ps1` builds, copies the exe to `C:\Tools\TaskFocuser`, registers the autostart and a Start-menu shortcut, and launches it; with `-ExePath <downloaded exe>` it does the same for a release exe without building. The source is in `app/` with a folder map in `app/README.md`.
+Build and run the Rust app with:
 
-## How it was made
+```sh
+cargo run --locked -p task-focuser
+```
 
-The app was built in one day, 2026-11-04, in five rounds by crews of Claude agents working from the specs in `docs/` (`SPEC.md` for the base, `SPEC-round2.md` to `SPEC-round5.md` for the bird and everything after), with the reasons behind each design call in `context/decisions.md`. It replaced a small Python sticky note (tag `v1.0.0` in this repo) and reads that app's state file unchanged.
+For a release build, run `scripts/build.sh` on Linux or macOS, or `scripts/build.ps1` in PowerShell on Windows. The binary is in `target/release/`. Run `scripts/check.sh` to check formatting, lints, and tests. CI checks the workspace on all three platforms and uploads release binaries as workflow artifacts. Its Linux job also exercises the native Wayland window under headless Sway. Windows and macOS jobs compile and run automated tests; they do not exercise the desktop UI.
+
+Use `--help` to list the note commands and options. `--backend auto|native|wayland` selects the desktop host. On Linux, auto selects Wayland when available; that host requires layer-shell support. Use `--backend native` in an X11 session. `--no-tray` and `--no-sound` are available only for isolated runs.
+
+For testing without changing the default note, set `TASKFOCUSER_DATA_DIR` to a disposable directory or set `TASKFOCUSER_PROFILE` to a separate profile name. Isolated runs cannot change login startup settings. See the migration notes for the default state paths.
+
+The original WPF source is available in [Git history](https://github.com/Omni-Wild/task-focuser/tree/67b0db1/app).
 
 ## License
 
-MIT, see `LICENSE`.
+MIT. See [LICENSE](LICENSE).

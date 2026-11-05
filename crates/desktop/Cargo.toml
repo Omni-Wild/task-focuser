@@ -1,0 +1,39 @@
+[package]
+name = "task-focuser"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A small floating focus note with a bird companion"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+iced = { workspace = true }
+raw-window-handle = "0.6"
+serde_json.workspace = true
+task-focuser-core = { workspace = true }
+task-focuser-platform = { workspace = true }
+tokio.workspace = true
+tracing = { workspace = true }
+tracing-subscriber = "0.3.23"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+iced = { version = "0.14", default-features = false, features = ["tiny-skia"] }
+iced_layershell = { version = "0.19.1", default-features = false }
+# The layer-shell software renderer needs Wayland buffers independently of the native X11 host.
+iced_renderer = { version = "0.14", default-features = false, features = ["wayland"] }
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "unstable"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+iced = { version = "0.14", default-features = false, features = ["wgpu"] }
+
+[build-dependencies]
+embed-manifest = "1.5.1"

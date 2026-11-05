@@ -1,0 +1,52 @@
+name: Windows visual parity capture
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Fetch original WPF source
+        shell: pwsh
+        run: |
+          git clone --no-checkout https://github.com/Omni-Wild/task-focuser.git "$env:RUNNER_TEMP\task-focuser-original"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git -C "$env:RUNNER_TEMP\task-focuser-original" checkout 67b0db11394ae1b265f11bfe013bea4631f8a9c8
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 9.0.x
+      - name: Build original WPF app
+        shell: pwsh
+        run: |
+          dotnet build "$env:RUNNER_TEMP\task-focuser-original\app\TaskFocuser.csproj" -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install Rust
+        run: rustup toolchain install 1.94.0 --profile minimal
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          shared-key: windows-latest
+      - name: Build Rust app
+        run: cargo build --locked -p task-focuser
+      - name: Capture both desktop apps
+        shell: pwsh
+        run: |
+          $original = Get-ChildItem "$env:RUNNER_TEMP\task-focuser-original\app\bin\Release" -Filter TaskFocuser.exe -Recurse | Select-Object -First 1
+          if (-not $original) { throw 'Original WPF executable was not built' }
+          ./tests/visual/windows-capture.ps1 -Original $original.FullName -Rust "$PWD\target\debug\task-focuser.exe" -OutputDir "$PWD\target\visual-parity"
+      - name: Upload captures and diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-visual-parity
+          path: target/visual-parity/
+          if-no-files-found: warn
+          retention-days: 7
