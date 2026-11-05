@@ -4,11 +4,11 @@
         Title="Task Focuser cucumber" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" ShowActivated="False" Focusable="False"
         WindowStartupLocation="Manual" IsHitTestVisible="False" Width="28" Height="52">
-    <!-- The slice carried under the cursor (SPEC-round2 2.9). The slice sits in the top 28 DIP square,
+    <!-- The treat carried under the cursor (SPEC-round2 2.9, SPEC-round6 2.6). It sits in the top 28 DIP square,
          centred on the cursor; the 24 DIP below are the room it falls into when dropped, transparent and
          click-through like the rest, so the fall is a render transform and the window never moves for it. -->
     <Canvas IsHitTestVisible="False">
-        <Image x:Name="Slice" Source="{StaticResource TF.CucumberSlice}" Width="20" Height="20"
+        <Image x:Name="Slice" Source="{StaticResource TF.CucumberSlice}" Width="20" Height="20" SnapsToDevicePixels="True"
                Canvas.Left="4" Canvas.Top="4">
             <Image.RenderTransform>
                 <TranslateTransform x:Name="Fall" />

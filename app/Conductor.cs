@@ -73,6 +73,7 @@ public sealed partial class Conductor
         StartRound2();
         StartRound4();   // round 4 (Conductor.Round4.cs): the typing chain
         StartRound5();   // round 5 (Conductor.Round5.cs): the picked bird's skin, before the first arrival
+        StartRound6();   // round 6 (Conductor.Round6.cs): the begging while the treat is carried
 
         Guard("EnterSavedMode", EnterSavedMode);
         ready = true;

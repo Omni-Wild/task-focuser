@@ -33,6 +33,8 @@ public partial class MonsterWindow
     /// <summary>One quick peck at a seed; a peck asked for during one is queued, at most one deep.</summary>
     public void Peck()
     {
+        // A key he typed counts as a touch for the dog's nap even when this peck is not played.
+        Touch();
         // Only a bird sitting on the note: any flight (the sulk and its unseen wait included), a drag,
         // a tumble, a loop (the shove's bump) or a press on the bird wins.
         if (!IsVisible || !IsOut || motion != Motion.None || loop != Loop.None || carrying
@@ -67,12 +69,20 @@ public partial class MonsterWindow
             ScheduleIdle();
             return;
         }
-        int roll = Random.Shared.Next(FidgetRoll);
+        // Round 6: a dog draws from a longer roll; its first FidgetRoll are the shared fidgets with their
+        // old odds between them, the rest are hers (Dog.cs). A bird draws exactly as before.
+        int roll = Random.Shared.Next(Skin.Dog is null ? FidgetRoll : FidgetRoll + DogFidgetRoll);
+        if (roll >= FidgetRoll)
+        {
+            PlayDogFidget(roll - FidgetRoll);
+            return;
+        }
         if (roll < SeedShare)
         {
-            int gap = Random.Shared.Next(3, 6);
-            // On the ground line: the window's bottom edge is the feet line, the seed one cell tall.
-            seedSpot = new Point(SpriteX + (FrontToeColumn + 1 + gap) * Sprites.CellSize, WinH - Sprites.CellSize);
+            // A dog's Peck2 holds the kibble at columns 18-20, which only gap 3 meets: she draws 2 or 3.
+            int gap = Skin.Dog is null ? Random.Shared.Next(3, 6) : Random.Shared.Next(2, 4);
+            // On the ground line: the window's bottom edge is the feet line (the seed is one cell tall, the kibble two).
+            seedSpot = new Point(SpriteX + (FrontToeColumn + 1 + gap) * Sprites.CellSize, WinH - effects.SeedHeight);
             PlayAct(Act.Idle, acts.Seed);
             return;
         }

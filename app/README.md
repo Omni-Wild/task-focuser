@@ -1,6 +1,6 @@
 # Task Focuser v2
 
-A post-it note that floats above everything on your screen, holding the one to three lines you are focusing on right now. Locked, it is a read-only note you can drag out of the way; double-click to unlock and type. Drag it onto the red dot that appears in the monitor's top-right corner and it tucks itself away there. A small pixel bird (Lennie the budgie or Meggie the owl, since round 5) keeps you company while you edit and carries the note when you move it. It replaces the old Python Task Focuser and keeps its note.
+A post-it note that floats above everything on your screen, holding the one to three lines you are focusing on right now. Locked, it is a read-only note you can drag out of the way; double-click to unlock and type. Drag it onto the red dot that appears in the monitor's top-right corner and it tucks itself away there. A small pixel companion (Lennie the budgie or Meggie the owl since round 5, or Rori the Japanese spitz since round 6) keeps you company while you edit and carries the note when you move it. It replaces the old Python Task Focuser and keeps its note.
 
 ## Install
 
@@ -142,3 +142,15 @@ The spec for this round: `../docs/SPEC-round2.md`.
 - The lock/unlock shake is gentler.
 - A size set with the corner grip applies only while unlocked; a locked note always compacts. The vines keep their full look either way.
 - The dot remembers where you last dropped it; dragging the note or "Start the dot" brings it back there (as the same offset from the corner on the other monitor). Until you move it, it sits in the top-right corner.
+
+## Round 6 (2026-11-05)
+
+- A third companion: Rori, a white Japanese spitz (drawn as her mother Lily looks at two: the ruff, the plumed tail curled over her back, the fox-like smile). Pick her in the picker like the birds; it has three rows now, and she is renamed the same way.
+- She never flies. She runs in along the note's top edge and skids to a stop with a puff of dust, runs off to the side when she leaves, and when you drag the note she chases her spot, facing the way you pull and trailing a little behind; held still, she stands and wags.
+- Everything the birds do she does in her own way: the head tilt, the scratch behind the ear, the shake-off instead of the ruffle, sniffing for kibble while you type, the trot instead of the walk. Her own on top: the wag, the play bow, now and then zoomies to the end of the note and back, and a nap (a few z's, then a stretch) when nothing has touched her for three minutes.
+- Her treat is a bone biscuit: the bar shows it in place of the cucumber while she is the companion. Pick it up and she sits up and begs; drop it on her and she eats it, happy; drop it anywhere else, or lock or hide the note mid-drag, and she sits back down. The treat follows whichever companion is picked: the birds keep the cucumber.
+- If another window takes the mouse while you carry the treat (Alt-Tab, a popup), the treat falls where it is and counts as put away, never as a drop on her; before, a lost mouse counted as a release.
+- Her own five sounds, all synthesized: a soft "wuf", "yip-yip", a small grumble, a questioning "hm?" and the "fwup-fwup" of the shake. The volume popup's idle-sound choices read `wuf / shake / both` while she is the companion.
+- A seventh colour: white (`#FAFAF8`), with the usual slightly darker strip and bar.
+
+The spec for this round: `../docs/SPEC-round6.md`.

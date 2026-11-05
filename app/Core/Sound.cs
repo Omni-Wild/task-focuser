@@ -9,12 +9,13 @@ namespace TaskFocuser.Core;
 public enum ChirpKind { Keepalive, Happy, Annoyed, Peep, Ruffle }
 
 /// <summary>
-/// The birds' voices: five sounds per bird synthesized in code, rendered once to wave files under
-/// %LOCALAPPDATA%\Task Focuser\sounds\ and played through WPF MediaPlayer (SPEC-round2 2.5, SPEC-round5 2.3).
+/// The companions' voices: five sounds each synthesized in code, rendered once to wave files under
+/// %LOCALAPPDATA%\Task Focuser\sounds\ and played through WPF MediaPlayer (SPEC-round2 2.5, SPEC-round5 2.3,
+/// SPEC-round6 2.4; Rori's synthesis lives in Sound.Rori.cs).
 /// Synthesizing keeps the exe free of binary assets and lets us tune the sound in code;
 /// files are needed because MediaPlayer plays from a URI, not from memory.
 /// </summary>
-public static class Sound
+public static partial class Sound
 {
     /// <summary>Round 2's fixed keep-alive interval. Round 3's conductor draws random intervals from
     /// <c>state.IdleRate</c> instead; kept so nothing that still names it breaks.</summary>
@@ -26,8 +27,8 @@ public static class Sound
 
     /// <summary>The birds that have a voice, by the ids of Monster/Birds.cs. Kept here rather than read from
     /// Birds so Core stays free of the sprite code; a bird without its own synthesis sounds like Lennie.</summary>
-    internal static readonly string[] Voices = { "lennie", "meggie" };
-    private const string Lennie = "lennie", Meggie = "meggie";
+    internal static readonly string[] Voices = { "lennie", "meggie", "rori" };
+    private const string Lennie = "lennie", Meggie = "meggie", Rori = "rori";
 
     private static readonly object RenderLock = new();
     // One player per (bird, kind), held in a field: repeated plays reuse the opened media (instant),
@@ -197,8 +198,12 @@ public static class Sound
     // 10 ms of lead-in silence: MediaPlayer can swallow the very first milliseconds of a file.
     private const double Lead = 0.010;
 
-    internal static short[] Render(ChirpKind kind, string bird = Lennie) =>
-        VoiceOf(bird) == Meggie ? RenderMeggie(kind) : RenderLennie(kind);
+    internal static short[] Render(ChirpKind kind, string bird = Lennie) => VoiceOf(bird) switch
+    {
+        Meggie => RenderMeggie(kind),
+        Rori => RenderRori(kind),
+        _ => RenderLennie(kind),
+    };
 
     /// <summary>Lennie the budgie: the round-2/3 sounds, unchanged sample for sample (only the file names moved).</summary>
     private static short[] RenderLennie(ChirpKind kind)
@@ -405,7 +410,7 @@ public static class Sound
         return buf;
     }
 
-    /// <summary>One RBJ cookbook biquad (direct form I); the ruffle's feathers and the owl's breath use it.</summary>
+    /// <summary>One RBJ cookbook biquad (direct form I); the ruffle's feathers, the owl's breath and Rori's air use it.</summary>
     private sealed class Biquad
     {
         private readonly double b0, b1, b2, a1, a2;

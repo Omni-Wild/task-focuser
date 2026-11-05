@@ -19,8 +19,6 @@ public partial class BirdPicker : UserControl
 
     private static readonly Brush ValidEdge = Frozen(Color.FromArgb(0x5A, 0x2B, 0x2A, 0x25));
     private static readonly Brush InvalidEdge = Frozen(Color.FromRgb(0xD0, 0x4A, 0x3A));
-    // One brush per legend key, shared by every portrait: the legends of all birds plus the glyphs, merged.
-    private static readonly Dictionary<char, Brush> CellBrushes = BuildBrushes();
 
     private sealed record Row(BirdSkin Skin, TextBlock Name, TextBox Box);
 
@@ -103,7 +101,7 @@ public partial class BirdPicker : UserControl
     {
         var portrait = new Image
         {
-            Source = Portrait(skin.IdleOpen),
+            Source = SpriteImage.Render(skin.IdleOpen, 1),
             Width = 22,
             Height = 16,
             Stretch = Stretch.Uniform,
@@ -224,49 +222,6 @@ public partial class BirdPicker : UserControl
         foreach (char c in text)
             if (!char.IsLetterOrDigit(c) && c != ' ') return false;
         return true;
-    }
-
-    // ---- the portraits --------------------------------------------------------------------------------
-
-    /// <summary>A frame at 1 DIP per cell, one rectangle per run of equal cells, as the sprite view draws it.</summary>
-    private static ImageSource Portrait(string[] rows)
-    {
-        int cols = 0;
-        foreach (var r in rows) cols = Math.Max(cols, r.Length);
-        var group = new DrawingGroup();
-        RenderOptions.SetEdgeMode(group, EdgeMode.Aliased);
-        using (var dc = group.Open())
-        {
-            // The transparent backdrop pins the bounds to the whole grid, so the feet sit where the grid says.
-            dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, cols, rows.Length));
-            for (int y = 0; y < rows.Length; y++)
-            {
-                string row = rows[y];
-                int x = 0;
-                while (x < row.Length)
-                {
-                    char ch = row[x];
-                    int start = x;
-                    while (x < row.Length && row[x] == ch) x++;
-                    if (CellBrushes.TryGetValue(ch, out var b)) dc.DrawRectangle(b, null, new Rect(start, y, x - start, 1));
-                }
-            }
-        }
-        group.Freeze();
-        var image = new DrawingImage(group);
-        image.Freeze();
-        return image;
-    }
-
-    private static Dictionary<char, Brush> BuildBrushes()
-    {
-        var map = new Dictionary<char, Brush>();
-        foreach (var (key, hex) in Birds.MergedLegend)
-        {
-            if (string.IsNullOrEmpty(hex)) continue; // transparent cells are not drawn
-            map[key] = Frozen((Color)ColorConverter.ConvertFromString(hex));
-        }
-        return map;
     }
 
     private static SolidColorBrush Frozen(Color c)

@@ -41,6 +41,12 @@ internal sealed class Grip
     /// <summary>The smoothed perch speed, DIP per second.</summary>
     public double Speed { get; private set; }
 
+    /// <summary>Its horizontal part with its sign: the carried dog faces and trails by it (SPEC-round6 2.2).</summary>
+    public double VelocityX => perchVel.X;
+
+    /// <summary>A companion on the ground (round 6) tumbles along the perch line: no sag below it.</summary>
+    public bool Ground { get; set; }
+
     /// <summary>True while it has let go and the spring drives the window.</summary>
     public bool Tumbling { get; private set; }
 
@@ -95,7 +101,7 @@ internal sealed class Grip
 
         // Semi-implicit Euler: velocity first, then position, which stays stable at these stiffnesses
         // for any frame time under the 50 ms the caller caps dt at.
-        double gx = target.X, gy = target.Y + Sag;
+        double gx = target.X, gy = target.Y + (Ground ? 0 : Sag);
         vel = new Vector(
             vel.X + (Stiffness * (gx - pos.X) - Damping * vel.X) * dt,
             vel.Y + (Stiffness * (gy - pos.Y) - Damping * vel.Y) * dt);
@@ -186,12 +192,14 @@ public partial class MonsterWindow
         }
         else if (loop == Loop.Flap && motion == Motion.None)
         {
+            // Round 6: a dog chases the spot instead; while she stands and wags there is no beat to speed up.
+            if (OnGround && StepChase(dt)) return;
             // Between the calm and the losing speed it still holds on, flapping harder for balance.
             bool fast = grip.Speed > Grip.FastSpeed;
             if (fast != fastFlap)
             {
                 fastFlap = fast;
-                frameTimer.Interval = fast ? FastFlapTick : FlapTick;
+                frameTimer.Interval = fast ? acts.FastFlapTick : acts.FlapTick;
             }
         }
     }
@@ -203,6 +211,8 @@ public partial class MonsterWindow
         blinkTimer.Stop();
         blinking = false;
         Sprite.FlipX = false;
+        ResetChase(); // the spring has her now: no trail, and the tumble's frames replace a standing wag
+        chaseStanding = false;
         loop = Loop.Tumble;
         flapIndex = 0;
         Sprite.Frame = Skin.Tumble1;
@@ -217,6 +227,7 @@ public partial class MonsterWindow
         if (!IsVisible) return;
         StartMotion(Motion.Fly, catchAnim, new Point(Left, Top), default);
         StartFlap();
+        FaceTravel(Left, TopLeftFor(perch).X);
     }
 
     // ---- the bird as a handle -----------------------------------------------------------------
@@ -230,6 +241,7 @@ public partial class MonsterWindow
         if (w.X < SpriteX || w.X > SpriteX + SpriteW || w.Y < SpriteY || w.Y > SpriteY + SpriteH) return;
         pressScreen = new Point(Left + w.X, Top + w.Y);
         lastScreen = pressScreen;
+        Touch(); // a click or a drag by her: the dog's nap clock starts over
         pressed = true;
         dragging = false;
         if (!CaptureMouse())
@@ -316,13 +328,16 @@ public partial class MonsterWindow
         if (!IsVisible) return;
         blinkTimer.Stop();
         blinking = false;
-        Sprite.FlipX = false;
-        if (loop == Loop.Flap) return;
+        // A bird beats its wings facing right; a dog runs the way she goes, which her caller sets (FaceTravel).
+        if (!OnGround) Sprite.FlipX = false;
+        // A dog standing still under the carried note has the loop but not its frames: she runs again.
+        if (loop == Loop.Flap && !chaseStanding) return;
+        chaseStanding = false;
         loop = Loop.Flap;
         flapIndex = 0;
         fastFlap = false;
         Sprite.Frame = acts.FlapCycle[0];
-        frameTimer.Interval = FlapTick;
+        frameTimer.Interval = acts.FlapTick;
         frameTimer.Start();
     }
 
@@ -378,6 +393,7 @@ public partial class MonsterWindow
     {
         frameTimer.Stop();
         loop = Loop.None;
+        chaseStanding = false; // standing still is a state of the carry loop only
     }
 
     private void OnFrameTick(object? sender, EventArgs e)

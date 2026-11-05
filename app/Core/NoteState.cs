@@ -68,7 +68,7 @@ public sealed class NoteState
     public double ManualHeight { get; set; } = double.NaN;
 
     // Round 5 (docs/SPEC-round5.md).
-    /// <summary>The active bird's id ("lennie", "meggie"); unknown = Lennie.</summary>
+    /// <summary>The active companion's id ("lennie", "meggie", "rori"); unknown = Lennie.</summary>
     public string Bird { get; set; } = "lennie";
     /// <summary>His names for the birds by id; absent = the bird's default name.</summary>
     public Dictionary<string, string> BirdNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);

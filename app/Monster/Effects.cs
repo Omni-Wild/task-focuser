@@ -9,7 +9,8 @@ namespace TaskFocuser.Monster;
 
 /// <summary>
 /// The landing dust and the hearts (SPEC-round2 2.9, 2.10), and the seed on the ground of the
-/// "eats a seed" fidget (SPEC-round4 2.3), drawn inside the bird's own window.
+/// "eats a seed" fidget (SPEC-round4 2.3), drawn inside the bird's own window; round 6 adds the
+/// dog's sleepy z (SPEC-round6 2.3, the nap) as a fourth pooled kind and her kibble as the seed.
 /// A fixed pool of glyph views made once, each with its own transform: a frame only writes
 /// numbers into existing objects (no layout, no allocations), and when the last particle fades
 /// the views collapse and <see cref="Active"/> goes false so the caller can drop its render hook.
@@ -20,13 +21,18 @@ internal sealed class Effects
 {
     public const int MaxDust = 10;
     private const int HeartCount = 3;
-    private const int Count = MaxDust + HeartCount;
+    // One z every 2.4 s that lives 2 s: three views, so a z asked for early never steals a live one.
+    private const int ZzCount = 3;
+    private const int ZzFirst = MaxDust + HeartCount;
+    private const int Count = ZzFirst + ZzCount;
 
     private const double DustLife = 0.30;    // seconds
     private const double DustDrag = 6.0;     // per second; the puff slows quickly like air does
     private const double HeartLife = 0.90;
     private const double HeartRise = 52;     // DIP over a heart's life
     private const double HeartStagger = 0.12;
+    private const double ZzLife = 2.0;
+    private const double ZzRise = 30;        // DIP over a z's life, a slow drift next to the hearts' puff
 
     private readonly SpriteView[] views = new SpriteView[Count];
     private readonly TranslateTransform[] moves = new TranslateTransform[Count];
@@ -35,9 +41,9 @@ internal sealed class Effects
     private readonly double[] age = new double[Count], delay = new double[Count];
     private readonly double[] baseX = new double[Count], sway = new double[Count];
     private readonly bool[] alive = new bool[Count];
-    private int aliveCount;
+    private int aliveCount, zzNext;
 
-    private readonly double dustW, dustH, heartW, heartH;
+    private readonly double dustW, dustH, heartW, heartH, zzH;
     private readonly SpriteView seed;
     private readonly TranslateTransform seedMove = new();
 
@@ -48,7 +54,7 @@ internal sealed class Effects
             var t = new TranslateTransform();
             var v = new SpriteView
             {
-                Frame = i < MaxDust ? Sprites.Dust : Sprites.Heart,
+                Frame = i < MaxDust ? Sprites.Dust : i < ZzFirst ? Sprites.Heart : DogSprites.Zz,
                 RenderTransform = t,
                 Visibility = Visibility.Collapsed,
                 IsHitTestVisible = false,
@@ -61,6 +67,7 @@ internal sealed class Effects
         dustH = Sprites.Dust.Length * Sprites.CellSize;
         heartW = Width(Sprites.Heart) * Sprites.CellSize;
         heartH = Sprites.Heart.Length * Sprites.CellSize;
+        zzH = DogSprites.Zz.Length * Sprites.CellSize;
         // Added last so it lies over the dust: a landing puff must not hide the seed it is about to eat.
         seed = new SpriteView
         {
@@ -111,6 +118,20 @@ internal sealed class Effects
         }
     }
 
+    /// <summary>One sleepy z drifting up from above the head; <paramref name="head"/> is where its bottom-left starts.</summary>
+    public void Zz(Point head)
+    {
+        int i = ZzFirst + zzNext;
+        zzNext = (zzNext + 1) % ZzCount;
+        baseX[i] = head.X;
+        x[i] = head.X;
+        y[i] = head.Y - zzH;
+        sway[i] = Random.Shared.NextDouble() * Math.PI * 2;
+        age[i] = 0;
+        delay[i] = 0;
+        Wake(i);
+    }
+
     /// <summary>Advances every live particle by <paramref name="dt"/> seconds.</summary>
     public void Tick(double dt)
     {
@@ -135,7 +156,7 @@ internal sealed class Effects
                 if (p >= 1) { Sleep(i); continue; }
                 Place(i, 1 - p);
             }
-            else
+            else if (i < ZzFirst)
             {
                 double p = age[i] / HeartLife;
                 if (p >= 1) { Sleep(i); continue; }
@@ -144,8 +165,26 @@ internal sealed class Effects
                 x[i] = baseX[i] + Math.Sin(sway[i] + p * 7) * 3;
                 Place(i, p < 0.4 ? 1 : 1 - (p - 0.4) / 0.6, rise);
             }
+            else
+            {
+                double p = age[i] / ZzLife;
+                if (p >= 1) { Sleep(i); continue; }
+                // A sleepy z: a steady rise and a lazy sway, in quickly, out over its second half.
+                x[i] = baseX[i] + Math.Sin(sway[i] + p * 5) * 2;
+                Place(i, p < 0.15 ? p / 0.15 : p < 0.5 ? 1 : (1 - p) / 0.5, ZzRise * p);
+            }
         }
     }
+
+    /// <summary>What lies on the ground in the seed fidget (round 6: the dog's kibble); the window sets it with the skin.</summary>
+    public void SetSeedGlyph(string[] glyph)
+    {
+        seed.Frame = glyph;
+        SeedHeight = glyph.Length * Sprites.CellSize;
+    }
+
+    /// <summary>The ground glyph's height, so the fidget lays it on the ground line whatever its size.</summary>
+    public double SeedHeight { get; private set; } = Sprites.Seed.Length * Sprites.CellSize;
 
     /// <summary>Puts the seed down with its top-left cell at <paramref name="topLeft"/>; no animation.</summary>
     public void ShowSeed(Point topLeft)
@@ -214,11 +253,12 @@ public partial class MonsterWindow
     // Ruffle is the public, sounding one; an idle fidget ruffle runs as Idle. Fume is the last annoyed
     // chirp before the sulk flight, which starts when it ends. Peck is the typing peck (Peck()); the
     // seed fidget runs as Idle like every other fidget, so anything that may cut a fidget cuts it.
-    private enum Act { None, Eat, Hop, Annoyed, Idle, FlapBurst, Ruffle, Fume, Peck }
-    // SeedShow and SeedHide put the fidget's ground seed down and pick it up (at seedSpot).
-    private enum Cue { None, Hearts, Hop, IdleHop, Shake, Jitter, Settle, SeedShow, SeedHide }
-
-
+    // Round 6 (Dog.cs): WagBurst is the dog's Flap, a real act like FlapBurst; Beg is held until Beg(false).
+    // The dog's fidgets (the wag, the bow, the nap) run as Idle, so they are cut like every other fidget.
+    private enum Act { None, Eat, Hop, Annoyed, Idle, FlapBurst, Ruffle, Fume, Peck, WagBurst, Beg }
+    // SeedShow and SeedHide put the fidget's ground seed down and pick it up (at seedSpot). Round 6: Lean
+    // shifts the sprite forward for the play bow, Zz sends one sleepy z up from the napping dog's head.
+    private enum Cue { None, Hearts, Hop, IdleHop, Shake, Jitter, Settle, SeedShow, SeedHide, Lean, Zz }
 
     private readonly TranslateTransform spriteShift = new();
     private readonly DispatcherTimer actTimer = new(DispatcherPriority.Render);
@@ -238,28 +278,7 @@ public partial class MonsterWindow
         awayTimer.Tick += OnAwayTick;
     }
 
-    public void Eat()
-    {
-        // The cucumber makes peace at once (SPEC-round3 2.6), even when it cannot eat right now.
-        ResetMood();
-        // Ignored mid-flight, while carried or tumbling, and while he is dragging by the bird.
-        if (!IsVisible || !IsOut || motion != Motion.None || carrying || grip.Tumbling || dragging) return;
-        PlayAct(Act.Eat, acts.Eat);
-    }
-
-    public void Flap()
-    {
-        // The keep-alive's visible half: only a resting or fidgeting bird; any real activity wins.
-        if (!IsVisible || !IsOut || motion != Motion.None || carrying || grip.Tumbling || pressed) return;
-        if (act is not (Act.None or Act.Idle)) return;
-        StopWalk(); // the burst flaps where it stands; the rest after it walks back
-        StopAct();
-        idleTimer.Stop();
-        act = Act.FlapBurst;
-        StartFlap();
-        actTimer.Interval = TimeSpan.FromMilliseconds(700);
-        actTimer.Start();
-    }
+    // The public entries Eat and Flap live beside Ruffle in MonsterWindow.Mood.cs (round 6 moved them there).
 
     private void PlayAct(Act kind, (string[] Frame, int Ms, Cue Cue)[] steps)
     {
@@ -290,7 +309,7 @@ public partial class MonsterWindow
         {
             case Cue.Hearts:
                 // From just above the head, in the window's own coordinates.
-                effects.Hearts(new Point(WinW / 2, SpriteY + 3 * Sprites.CellSize));
+                effects.Hearts(acts.HeartsAt);
                 ChirpRequested?.Invoke(ChirpKind.Happy);
                 UpdateRenderHook();
                 break;
@@ -317,9 +336,18 @@ public partial class MonsterWindow
             case Cue.SeedHide:
                 effects.HideSeed();
                 break;
+            case Cue.Lean:
+                spriteShift.X = BowLean;
+                break;
+            case Cue.Zz:
+                effects.Zz(ZzHead);
+                UpdateRenderHook();
+                break;
         }
         // A handler above may have hidden the bird (StopEverything ended the act).
         if (act == Act.None) return;
+        // A held step (the dog begging) waits for whoever ends it, with no timer running meanwhile.
+        if (s.Ms <= 0) return;
         actTimer.Interval = TimeSpan.FromMilliseconds(s.Ms);
         actTimer.Start();
     }
@@ -389,22 +417,5 @@ public partial class MonsterWindow
         return a;
     }
 
-    /// <summary>The landing dust of 2.10: more the longer nothing landed on the note, none right after a landing.</summary>
-    private void Land()
-    {
-        long now = Environment.TickCount64;
-        int n = DustFor(now - lastLanding);
-        lastLanding = now;
-        if (n > 0) effects.BurstDust(n, new Point(WinW / 2, WinH));
-    }
-
-    private static int DustFor(long sinceMs)
-    {
-        if (sinceMs < 2000) return 0;
-        double s = sinceMs / 1000.0;
-        if (s <= 60) return 3;
-        // Linear in log time: 3 at a minute, 10 at an hour and beyond.
-        double t = Math.Min(1, Math.Log(s / 60) / Math.Log(60));
-        return 3 + (int)Math.Round(7 * t);
-    }
+    // The landing dust count (Land) lives with the ends of the paths in MonsterWindow.Ground.cs (round 6 moved it there).
 }

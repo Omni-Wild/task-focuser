@@ -43,10 +43,14 @@ public interface INoteWindow
     void Shake();
     /// <summary>Moves the visible note by <paramref name="delta"/> and updates State.X/Y; raises nothing (the bird drags the note through the conductor).</summary>
     void NudgeBy(Vector delta);
-    /// <summary>The cucumber slice was released at this cursor position (screen DIPs).</summary>
+    /// <summary>The treat (the cucumber slice, or the bone since round 6) was released by the button at this cursor position (screen DIPs); a lost capture is TreatDragCancelled instead.</summary>
     event Action<Point>? CucumberDropped;
     /// <summary>Round 4: one character typed or deleted by the keyboard while unlocked (not shortcuts).</summary>
     event Action? KeyTyped;
+    /// <summary>Round 6: the treat (cucumber or bone) drag made its first move; the companion may beg (SPEC-round6 2.3).</summary>
+    event Action? TreatDragStarted;
+    /// <summary>Round 6: the treat drag ended without a drop (lock, hide, squash, a lost capture); the drop itself is CucumberDropped.</summary>
+    event Action? TreatDragCancelled;
 }
 
 /// <summary>The blue pixel bird (Monster/MonsterWindow): its own non-activating window above the note; clickable on its pixels since round 2.</summary>
@@ -82,6 +86,8 @@ public interface IMonster
     void SwitchTo(TaskFocuser.Monster.BirdSkin skin, Point perch);
     /// <summary>Round 5: the x range the feet may occupy on the note's top edge (screen DIPs); the walk stays inside it.</summary>
     void SetPerchSpan(double left, double right);
+    /// <summary>Round 6: he picked the treat up (true) or put it away without a drop (false); a dog sits up begging, a bird ignores it (SPEC-round6 2.3).</summary>
+    void Beg(bool begging);
     /// <summary>True when the point lies on the sprite (generous by 6 DIP); for the cucumber drop.</summary>
     bool Contains(Point screenDip);
     /// <summary>A click with no movement (the hop is the bird's own; informational).</summary>

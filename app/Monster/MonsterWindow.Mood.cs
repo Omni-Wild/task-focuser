@@ -6,7 +6,8 @@ namespace TaskFocuser.Monster;
 
 // The perched bird's own temper (SPEC-round3 2.3, 2.6): resting and blinking, the click mood that
 // turns from happy to annoyed and, pestered enough, into a short sulk flight out of sight and back,
-// and the feather ruffle. Kept together because they are all rules about what may interrupt what.
+// and the feather ruffle. Kept together because they are all rules about what may interrupt what; for
+// the same reason the other two perched entries the conductor calls, Eat and Flap, sit beside Ruffle.
 //
 // The mood: a click after MoodCalmMs alone starts a fresh streak (and clears every counter); the first
 // two clicks of a streak are happy hops with a peep, the third and every later one an annoyed chirp.
@@ -30,7 +31,41 @@ public partial class MonsterWindow
     // The times of the last FleeChirps annoyed chirps, as a ring: annoyedNext is the oldest once it is full.
     private readonly long[] annoyedAt = new long[FleeChirps];
     private int annoyedNext, annoyedCount, clickStreak;
+    // How the companion that went away gets about (round 6); the one that comes back may differ after a switch.
+    private Locomotion awayLocomotion;
     private long lastClick = long.MinValue / 4;
+
+    public void Eat()
+    {
+        // The cucumber makes peace at once (SPEC-round3 2.6), even when it cannot eat right now.
+        ResetMood();
+        Touch();
+        // Ignored mid-flight, while carried or tumbling, and while he is dragging by the bird.
+        if (!IsVisible || !IsOut || motion != Motion.None || carrying || grip.Tumbling || dragging) return;
+        PlayAct(Act.Eat, acts.Eat);
+    }
+
+    public void Flap()
+    {
+        // The keep-alive's visible half: only a resting or fidgeting bird; any real activity wins.
+        if (!IsVisible || !IsOut || motion != Motion.None || carrying || grip.Tumbling || pressed) return;
+        if (act is not (Act.None or Act.Idle)) return;
+        // A napping dog sleeps through the keep-alive (the conductor still plays its sound).
+        if (Napping) return;
+        // Round 6: a dog wags for the same 700 ms instead (the "wuf" is the conductor's keep-alive sound).
+        if (acts.WagBurst is { } wag)
+        {
+            PlayAct(Act.WagBurst, wag);
+            return;
+        }
+        StopWalk(); // the burst flaps where it stands; the rest after it walks back
+        StopAct();
+        idleTimer.Stop();
+        act = Act.FlapBurst;
+        StartFlap();
+        actTimer.Interval = TimeSpan.FromMilliseconds(700);
+        actTimer.Start();
+    }
 
     /// <summary>Fluffs up and shakes, with the brrrp; the conductor's idle scheduler calls it.</summary>
     public void Ruffle()
@@ -39,6 +74,8 @@ public partial class MonsterWindow
         // blink is not worth keeping over the shake (the same rule as Flap).
         if (!IsVisible || !IsOut || motion != Motion.None || loop != Loop.None || carrying
             || grip.Tumbling || pressed || act is not (Act.None or Act.Idle)) return;
+        // A napping dog sleeps through it too: no shake, and no request, so the conductor plays the sound itself.
+        if (Napping) return;
         PlayAct(Act.Ruffle, acts.Ruffle);
         ChirpRequested?.Invoke(ChirpKind.Ruffle);
     }
@@ -84,8 +121,7 @@ public partial class MonsterWindow
         // A press that did not move yet (the next click on its way) is simply dropped.
         AbortPress();
         CancelActivity();
-        StartMotion(Motion.FlyOff, leaveAnim, new Point(Left, Top), OffscreenAbove());
-        StartFlap();
+        StartLeavePath(Motion.FlyOff);
         UpdateRenderHook();
         return true;
     }
@@ -95,6 +131,9 @@ public partial class MonsterWindow
     {
         StopLoop();
         motion = Motion.Away;
+        // Read before the swap below: OnAwayTick must know whether the one waiting up here (or off to the
+        // side) gets about the way the one that comes back does.
+        awayLocomotion = Skin.Locomotion;
         // The same climb serves the bird switch (SPEC-round5 2.4): unseen now, so the new bird is put
         // on here and comes in after the short switch gap instead of the sulk's second.
         bool switching = switchSkin is not null;
@@ -110,6 +149,14 @@ public partial class MonsterWindow
         // Away has no clock, so this only clears the state; the arrival then flies in from up here to
         // wherever the perch is now and lands with dust.
         StopMotion();
+        // Round 6: a dog runs back in from the side of the perch's monitor nearer the perch, and a switch
+        // between a bird and the dog starts the newcomer where it enters (a bird above, a dog at the side).
+        if (OnGround || Skin.Locomotion != awayLocomotion)
+        {
+            var start = ArrivalStart(perch);
+            Left = start.X;
+            Top = start.Y;
+        }
         ArriveAt(perch);
     }
 

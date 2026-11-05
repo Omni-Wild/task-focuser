@@ -1,8 +1,12 @@
 namespace TaskFocuser.Monster;
 
+/// <summary>How a companion gets about (SPEC-round6 2.2): a bird flies in from above, a dog runs in along the perch line.</summary>
+public enum Locomotion { Air, Ground }
+
 /// <summary>
-/// One bird: its id, its default name, its legend (cell character to colour) and the 23 frames every
+/// One companion: its id, its default name, its legend (cell character to colour) and the 23 frames every
 /// behaviour uses. The frame semantics are the contract: feet on the bottom row of the legs, facing right.
+/// Round 6 adds traits: how it moves, which treat it eats, and the dog's extra frames (SPEC-round6 3).
 /// </summary>
 public sealed class BirdSkin
 {
@@ -18,6 +22,15 @@ public sealed class BirdSkin
     public string DefaultName { get; }
     public Dictionary<char, string> Legend { get; }
     public Frames F { get; }
+
+    /// <summary>Air (the birds) or Ground (Rori): the arrival, the leave, the carrying and the catch pick their path by it.</summary>
+    public Locomotion Locomotion { get; init; } = Locomotion.Air;
+
+    /// <summary>The treat glyph shown on the bar and carried to the companion; null means the cucumber drawing of Theme.xaml.</summary>
+    public string[]? Treat { get; init; }
+
+    /// <summary>The dog-only frames (SPEC-round6 2.1); null for a bird, and the dog acts are then never drawn.</summary>
+    public DogExtras? Dog { get; init; }
 
     public string[] IdleOpen => F.IdleOpen;
     public string[] IdleBlink => F.IdleBlink;
@@ -43,14 +56,23 @@ public sealed class BirdSkin
     public string[] Walk1 => F.Walk1;
     public string[] Walk2 => F.Walk2;
 
-    /// <summary>Every frame, for pre-rendering.</summary>
-    public string[][] All => new[]
+    /// <summary>Every frame, the extras included, for pre-rendering.</summary>
+    public string[][] All
     {
-        IdleOpen, IdleBlink, FlapUp, FlapMid, FlapDown, ShoveA, ShoveB, Tumble1, Tumble2, Eat1, Eat2,
-        Happy, Chirp, TiltL, TiltR, Preen, Hop, Ruffle1, Ruffle2, Peck1, Peck2, Walk1, Walk2,
-    };
+        get
+        {
+            var list = new List<string[]>
+            {
+                IdleOpen, IdleBlink, FlapUp, FlapMid, FlapDown, ShoveA, ShoveB, Tumble1, Tumble2, Eat1, Eat2,
+                Happy, Chirp, TiltL, TiltR, Preen, Hop, Ruffle1, Ruffle2, Peck1, Peck2, Walk1, Walk2,
+            };
+            if (Dog is { } d)
+                list.AddRange(new[] { d.Wag1, d.Wag2, d.Bow, d.Beg, d.Skid, d.Lie, d.Sleep1, d.Sleep2, d.Stretch });
+            return list.ToArray();
+        }
+    }
 
-    /// <summary>The 23 frames of one bird, named after the round-2 to round-5 frame contract.</summary>
+    /// <summary>The 23 frames of one companion, named after the round-2 to round-5 frame contract.</summary>
     public sealed record Frames(
         string[] IdleOpen, string[] IdleBlink,
         string[] FlapUp, string[] FlapMid, string[] FlapDown,
@@ -62,4 +84,10 @@ public sealed class BirdSkin
         string[] Ruffle1, string[] Ruffle2,
         string[] Peck1, string[] Peck2,
         string[] Walk1, string[] Walk2);
+
+    /// <summary>The nine dog-only frames (SPEC-round6 2.1): the wag, the play bow, begging, the skid, the nap and the stretch.</summary>
+    public sealed record DogExtras(
+        string[] Wag1, string[] Wag2,
+        string[] Bow, string[] Beg, string[] Skid,
+        string[] Lie, string[] Sleep1, string[] Sleep2, string[] Stretch);
 }

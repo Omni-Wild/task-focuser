@@ -369,6 +369,7 @@ public partial class SettingsBar : UserControl
         if (_state is null) return;
         string name = BirdPicker.NameOf(_state, Birds.ById(_state.Bird));
         NameButton.Content = name.Length > 12 ? name[..11] + (char)0x2026 : name;
+        ApplyTreat(name);   // round 6: the treat and its tooltip follow the companion and her name
     }
 
     private static void Restart(DispatcherTimer t)

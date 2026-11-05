@@ -46,19 +46,21 @@
             <!-- Centred on the bird's feet (32 DIP from the paper's left, 4 right of the slot's middle) and on the bar's
                  centre line like every other control, so the row keeps one baseline (his ask after round 5). -->
             <Button x:Name="NameButton" Style="{StaticResource TF.NameSlot}" Height="17" MaxWidth="56" Margin="8,0,0,0"
-                    HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Pick or rename the bird" />
+                    HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Pick or rename the companion" />
         </Grid>
 
         <Button x:Name="LockButton" DockPanel.Dock="Right" Style="{StaticResource TF.Glyph}" Width="22"
                 Margin="0,0,4,0" Content="&#xE72E;" ToolTip="Lock (Esc)" />
 
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-            <!-- Item 3: the endless cucumber supply right beside the bird; the note runs its drag. -->
-            <Border x:Name="Cucumber" Style="{StaticResource TF.SliceHandle}" ToolTip="Drag onto the bird">
-                <Image Source="{StaticResource TF.CucumberSlice}" Width="14" Height="14" IsHitTestVisible="False" />
+            <!-- Item 3: the endless treat supply right beside the bird; the note runs its drag. The cucumber is the
+                 birds', the bone Rori's (SPEC-round6 2.6): the code swaps the image and its size with the companion. -->
+            <Border x:Name="Cucumber" Style="{StaticResource TF.SliceHandle}" ToolTip="Drag onto the companion">
+                <Image x:Name="TreatImage" Source="{StaticResource TF.CucumberSlice}" Width="14" Height="14"
+                       IsHitTestVisible="False" SnapsToDevicePixels="True" />
             </Border>
 
-            <ToggleButton x:Name="StaysToggle" Style="{StaticResource TF.Toggle}" ToolTip="Bird stays when locked">
+            <ToggleButton x:Name="StaysToggle" Style="{StaticResource TF.Toggle}" ToolTip="Companion stays when locked">
                 <Grid>
                     <!-- Off: an arrow up, the bird leaves upward on lock. -->
                     <Path x:Name="StaysOff" Style="{StaticResource TF.GlyphStroke}"
@@ -73,7 +75,7 @@
                 </Grid>
             </ToggleButton>
 
-            <ToggleButton x:Name="OpaqueToggle" Style="{StaticResource TF.Toggle}" ToolTip="Bird always opaque">
+            <ToggleButton x:Name="OpaqueToggle" Style="{StaticResource TF.Toggle}" ToolTip="Companion always opaque">
                 <Grid>
                     <!-- Off: a see-through bird (it follows the note's opacity); a plain pale fill, since an outline would
                          trace where the head and the body overlap. -->
@@ -139,9 +141,9 @@
                 <StackPanel Focusable="False">
                     <!-- The thumb position is Sound.VolumeToSlider(volume): the left half of the track is 0 to 10 %. -->
                     <Slider x:Name="VolumeSlider" Style="{StaticResource TF.Slider}" Margin="0,0,0,4"
-                            Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" ToolTip="Chirp volume" />
+                            Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" ToolTip="Sound volume" />
                     <UniformGrid x:Name="SoundChoices" Rows="1" Columns="3" Focusable="False"
-                                ToolTip="Which idle sounds the bird makes" />
+                                ToolTip="Which idle sounds the companion makes" />
                     <UniformGrid x:Name="RateChoices" Rows="1" Columns="3" Focusable="False"
                                 ToolTip="How often, roughly" />
                 </StackPanel>

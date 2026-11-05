@@ -11,6 +11,10 @@ namespace TaskFocuser.Monster;
 // act or a press (StopWalk) leaves it standing where it is and marks it stray, and the rest that follows
 // the act (EnterRest, ReturnIfStray) brings it home with a short glide first. A hide stops it like
 // everything else (StopEverything goes through CancelActivity).
+//
+// Round 6, the dog's zoomies (SPEC-round6 2.3, started in Dog.cs) are this same walk with zoom set: the
+// legs at ZoomSpeed with the run frames, a skid with a puff of dust instead of the pause at each end, and
+// one more Out leg to the other end (zoomOtherEnd) before the way home. So they are cut exactly like a walk.
 public partial class MonsterWindow
 {
     private enum WalkPhase { None, Out, Pause, Back, Return }
@@ -28,6 +32,10 @@ public partial class MonsterWindow
     private bool stray;
     private double walkX, walkTarget, walkSpeed, walkPause, walkFrameClock;
     private bool walkSecondFrame;
+    // The zoomies (round 6): the second end still to run to, NaN once only the way home is left.
+    private bool zoom;
+    private double zoomOtherEnd = double.NaN;
+    private int zoomFrame;
     // The x range the feet (the window's centre line) may occupy; NaN until the conductor says.
     private double spanLeft = double.NaN, spanRight = double.NaN;
 
@@ -37,7 +45,8 @@ public partial class MonsterWindow
         spanRight = Math.Max(left, right);
         // The note shrank under a bird that is out on its walk: it turns home now rather than walk off the edge.
         if (walkPhase is WalkPhase.Out or WalkPhase.Pause
-            && (OutsideSpan(walkTarget + WinW / 2) || OutsideSpan(walkX + WinW / 2)))
+            && (OutsideSpan(walkTarget + WinW / 2) || OutsideSpan(walkX + WinW / 2)
+                || (!double.IsNaN(zoomOtherEnd) && OutsideSpan(zoomOtherEnd + WinW / 2))))
             TurnHome();
     }
 
@@ -55,18 +64,25 @@ public partial class MonsterWindow
             if (room < WalkMinRoom) return false;
         }
         double distance = Math.Min(WalkMaxDistance, room - WalkEdgeGap);
+        BeginWalk(TopLeftFor(perch).X + dir * distance, WalkSpeed, zoomies: false);
+        return true;
+    }
+
+    /// <summary>Sets off from the perch toward <paramref name="target"/> (a window left): the walk, or the dog's zoomies.</summary>
+    private void BeginWalk(double target, double speed, bool zoomies)
+    {
         var home = TopLeftFor(perch);
         Left = home.X;
         Top = home.Y;
         walkX = home.X;
-        walkTarget = home.X + dir * distance;
+        walkTarget = target;
+        zoom = zoomies;
         // The walk owns the frames until it ends: no blink (the fidget timer has just fired).
         blinkTimer.Stop();
         blinking = false;
         idleTimer.Stop();
-        BeginLeg(WalkPhase.Out, WalkSpeed);
+        BeginLeg(WalkPhase.Out, speed);
         UpdateRenderHook();
-        return true;
     }
 
     private void BeginLeg(WalkPhase phase, double speed)
@@ -75,16 +91,18 @@ public partial class MonsterWindow
         walkSpeed = speed;
         walkFrameClock = 0;
         walkSecondFrame = false;
+        zoomFrame = 0;
         // Turned to face the way it goes; the glide home keeps the sitting pose, facing right.
         bool glide = phase == WalkPhase.Return;
         Sprite.FlipX = !glide && walkTarget < walkX;
-        Sprite.Frame = glide ? Skin.IdleOpen : Skin.Walk1;
+        Sprite.Frame = glide ? Skin.IdleOpen : zoom ? acts.FlapCycle[0] : Skin.Walk1;
     }
 
     private void TurnHome()
     {
         walkTarget = TopLeftFor(perch).X;
-        BeginLeg(WalkPhase.Back, WalkSpeed);
+        zoomOtherEnd = double.NaN; // the zoomies too: home is the last leg
+        BeginLeg(WalkPhase.Back, zoom ? ZoomSpeed : WalkSpeed);
     }
 
     /// <summary>One render frame of the walk; dt is capped by the caller.</summary>
@@ -93,7 +111,15 @@ public partial class MonsterWindow
         if (walkPhase == WalkPhase.Pause)
         {
             walkPause -= dt;
-            if (walkPause <= 0) TurnHome();
+            if (walkPause > 0) return;
+            if (!double.IsNaN(zoomOtherEnd))
+            {
+                // The zoomies' second dash: back past the perch to the other end.
+                walkTarget = zoomOtherEnd;
+                zoomOtherEnd = double.NaN;
+                BeginLeg(WalkPhase.Out, ZoomSpeed);
+            }
+            else TurnHome();
             return;
         }
         double step = walkSpeed * dt, d = walkTarget - walkX;
@@ -102,7 +128,15 @@ public partial class MonsterWindow
         Left = walkX;
         if (reached)
         {
-            if (walkPhase == WalkPhase.Out)
+            if (walkPhase == WalkPhase.Out && zoom)
+            {
+                // A zoomies turn: she brakes with a puff of dust, still facing the way she ran.
+                walkPhase = WalkPhase.Pause;
+                walkPause = ZoomSkidTime;
+                Sprite.Frame = acts.Skid;
+                effects.BurstDust(ZoomSkidDust, new Point(WinW / 2, WinH));
+            }
+            else if (walkPhase == WalkPhase.Out)
             {
                 // The pause at the far end: standing, still facing out, 300 to 800 ms.
                 walkPhase = WalkPhase.Pause;
@@ -117,8 +151,16 @@ public partial class MonsterWindow
         }
         if (walkPhase == WalkPhase.Return) return;
         walkFrameClock += dt;
-        if (walkFrameClock < WalkFrameTime) return;
-        walkFrameClock -= WalkFrameTime;
+        double frameTime = zoom ? ZoomFrameTime : WalkFrameTime;
+        if (walkFrameClock < frameTime) return;
+        walkFrameClock -= frameTime;
+        if (zoom)
+        {
+            var run = acts.FlapCycle;
+            zoomFrame = (zoomFrame + 1) % run.Length;
+            Sprite.Frame = run[zoomFrame];
+            return;
+        }
         walkSecondFrame = !walkSecondFrame;
         Sprite.Frame = walkSecondFrame ? Skin.Walk2 : Skin.Walk1;
     }
@@ -127,6 +169,7 @@ public partial class MonsterWindow
     private void FinishWalk()
     {
         walkPhase = WalkPhase.None;
+        zoom = false;
         stray = false;
         var home = TopLeftFor(perch);
         Left = home.X;
@@ -140,6 +183,8 @@ public partial class MonsterWindow
     {
         if (walkPhase == WalkPhase.None) return false;
         walkPhase = WalkPhase.None;
+        zoom = false;
+        zoomOtherEnd = double.NaN;
         stray = true;
         Sprite.FlipX = false;
         Sprite.Frame = Skin.IdleOpen;
@@ -179,7 +224,14 @@ public partial class MonsterWindow
         blinkTimer.Stop();
         blinking = false;
         idleTimer.Stop();
-        BeginLeg(WalkPhase.Return, Math.Abs(walkTarget - walkX) / ReturnTime);
+        if (OnGround && Math.Abs(walkTarget - walkX) > WalkMaxDistance)
+        {
+            // Round 6: zoomies cut at the far end of a wide note leave her further out than any walk can;
+            // the 120 ms sitting glide would cross that in a blink, so she runs home at the zoomies' pace.
+            zoom = true;
+            BeginLeg(WalkPhase.Back, ZoomSpeed);
+        }
+        else BeginLeg(WalkPhase.Return, Math.Abs(walkTarget - walkX) / ReturnTime);
         UpdateRenderHook();
         return true;
     }

@@ -12,10 +12,12 @@ namespace TaskFocuser.Monster;
 /// 0-to-1 animation of <see cref="ProgressProperty"/> whose callback places the window, so a flight can
 /// home in on a perch that moves under it and Left and Top always move together. Two more parts of
 /// this class live beside the code they drive: the render hook, the grip, the frame loops and the
-/// bird-as-handle drag and the shove in Grip.cs; the perched acts (eating, the hop, the idle fidgets) and the landing
-/// dust count in Effects.cs; resting, the click mood, the sulk flight and the ruffle in MonsterWindow.Mood.cs;
+/// bird-as-handle drag and the shove in Grip.cs; the act machine of the perched acts in Effects.cs;
+/// resting, the click mood, the sulk flight and the public Eat, Flap and Ruffle in MonsterWindow.Mood.cs;
 /// the peck, the seed fidget and the fidget draw in MonsterWindow.Peck.cs; round 5: the skin, its step
-/// tables and the bird switch in MonsterWindow.Skin.cs, the walk fidget in MonsterWindow.Walk.cs.
+/// tables and the bird switch in MonsterWindow.Skin.cs, the walk fidget in MonsterWindow.Walk.cs;
+/// round 6: where every path starts and ends, the landing dust, the dog's paths along the perch line
+/// and the chase in MonsterWindow.Ground.cs, her own acts in MonsterWindow.Dog.cs.
 /// The render hook exists only while carrying, tumbling, walking or an effect runs.
 /// </summary>
 public partial class MonsterWindow : Window, IMonster
@@ -149,30 +151,32 @@ public partial class MonsterWindow : Window, IMonster
         // Sulking or switching birds: it is out and already coming back, so a new perch only retargets the return.
         if (motion is Motion.FlyOff or Motion.Away) return;
         // Called back while it left with a bird switch pending: the bird that turns around is the new one.
+        var wasMoving = Skin.Locomotion;
         ApplyPendingSkin();
         IsOut = true;
         shoveDone = null;
         CancelActivity();
+        Touch();
         Opacity = baseOpacity;
         Sprite.FlipX = false;
 
         Point from;
-        if (IsVisible)
+        // Cancelling a leave, a shove or a tumble: turn around from wherever it is now. Unless the one that
+        // turns around gets about differently (a dog put on mid-climb): then it comes in the way it enters.
+        if (IsVisible && Skin.Locomotion == wasMoving)
         {
-            // Cancelling a leave, a shove or a tumble: turn around from wherever it is now.
             from = new Point(Left, Top);
         }
         else
         {
-            var target = TopLeftFor(perch);
-            double monitorTop = Monitors.BoundsAt(perch).Top;
-            from = new Point(target.X, Math.Min(target.Y - FlyDistance, monitorTop - WinH));
+            from = ArrivalStart(perch);
             Left = from.X;
             Top = from.Y;
-            Show();
+            if (!IsVisible) Show();
         }
-        StartMotion(Motion.Arrive, arriveAnim, from, default);
+        StartMotion(Motion.Arrive, OnGround ? groundArriveAnim : arriveAnim, from, default);
         StartFlap();
+        FaceTravel(from.X, TopLeftFor(perch).X);
         UpdateRenderHook();
     }
 
@@ -188,7 +192,8 @@ public partial class MonsterWindow : Window, IMonster
         }
         if (motion == Motion.None && !grip.Tumbling)
         {
-            Left = perch.X - WinW / 2;
+            // chaseTrail is the carried dog running behind the spot (Ground.cs); always 0 for a bird.
+            Left = perch.X - WinW / 2 + chaseTrail;
             Top = perch.Y - WinH;
         }
         // A flight homes in on the new perch on its next tick, a tumble's spring follows it on the next
@@ -207,6 +212,7 @@ public partial class MonsterWindow : Window, IMonster
         CancelActivity();
         StartMotion(Motion.Fly, flyAnim, from, default);
         StartFlap();
+        FaceTravel(from.X, to.X);
     }
 
     public void SetCarrying(bool carrying)
@@ -219,18 +225,19 @@ public partial class MonsterWindow : Window, IMonster
             // A drag beats any perched sequence (a drag that starts mid-eat ends the meal).
             StopAct();
             idleTimer.Stop();
+            Touch();
             grip.Reset(TopLeftFor(perch));
+            ResetChase();
             if (motion is Motion.None or Motion.Arrive or Motion.Fly) StartFlap();
         }
-        else if (grip.Tumbling)
+        else
         {
+            // A dog that ran a few DIP behind the spot is left stray, so the rest below trots her home.
+            EndChase();
             // The drag ended while it had let go: it flies back to the perch, then sits (or the
             // conductor sends it away, which takes over the catch).
-            StartCatch();
-        }
-        else if (motion == Motion.None && IsVisible && loop != Loop.Bump)
-        {
-            EnterRest();
+            if (grip.Tumbling) StartCatch();
+            else if (motion == Motion.None && IsVisible && loop != Loop.Bump) EnterRest();
         }
         UpdateRenderHook();
     }
@@ -258,8 +265,7 @@ public partial class MonsterWindow : Window, IMonster
             return;
         }
         CancelActivity();
-        StartMotion(Motion.Leave, leaveAnim, new Point(Left, Top), OffscreenAbove());
-        StartFlap();
+        StartLeavePath(Motion.Leave);
     }
 
     public void SetOpacity(double opacity)
@@ -308,6 +314,8 @@ public partial class MonsterWindow : Window, IMonster
 
     private void OnProgress(double p)
     {
+        // Round 6: a dog's arrival, run and leave keep to the perch line (Ground.cs); the shove is shared.
+        if (OnGround && GroundProgress(p)) return;
         switch (motion)
         {
             case Motion.Arrive:
@@ -394,6 +402,7 @@ public partial class MonsterWindow : Window, IMonster
         idleTimer.Stop();
         blinking = false;
         grip.Release();
+        ResetChase(); // a dog's trail behind the carried spot means nothing once a motion or a hide takes over
         // A new motion takes over from where the bird stands, so neither the walk nor its return go on.
         StopWalk();
         stray = false;
@@ -415,12 +424,5 @@ public partial class MonsterWindow : Window, IMonster
         UpdateRenderHook();
     }
 
-    /// <summary>Where a climb from here ends: out of sight above the monitor's top, at least a full flight up.</summary>
-    private Point OffscreenAbove()
-    {
-        double monitorTop = Monitors.BoundsAt(new Point(Left + WinW / 2, Top + WinH)).Top;
-        return new Point(Left, Math.Min(Top - HopHeight - FlyDistance, monitorTop - WinH));
-    }
-
-    private static Point TopLeftFor(Point perch) => new(perch.X - WinW / 2, perch.Y - WinH);
+    // Where the paths start and end (OffscreenAbove, OffscreenSide, ArrivalStart, TopLeftFor) live in Ground.cs.
 }

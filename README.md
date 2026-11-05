@@ -1,6 +1,6 @@
 # Task Focuser
 
-A post-it note taped to your monitor. One always-on-top sticky with the one to three lines you are focusing on right now, a lock so you cannot type into it by accident, a red dot in the corner to tuck it away, and a small pixel bird that keeps you company and keeps your Bluetooth headphones awake.
+A post-it note taped to your monitor. One always-on-top sticky with the one to three lines you are focusing on right now, a lock so you cannot type into it by accident, a red dot in the corner to tuck it away, and a small pixel companion (two birds, or Rori the dog) that keeps you company and keeps your Bluetooth headphones awake.
 
 Windows 10/11, one `.exe`, no installer, no account, no network. MIT licensed.
 
@@ -20,22 +20,24 @@ To have it start with Windows: right-click the bird icon in the tray (under the 
 
 - **Locked** (the resting state): the text cannot be changed and the note never takes the keyboard away from the app you are working in. Drag it anywhere. **Double-click it to unlock.**
 - **Unlocked**: the settings bar appears on top and the bird lands on it. Type freely, Enter makes a new line. Lock it again with the padlock, `Esc` or `Ctrl+L`, or double-click an empty spot of the bar.
-- **The bar**, left to right: the cucumber (drag it onto the bird), bird stays when locked, bird opacity, sound (click = on/off, hover = volume and how often the bird makes idle sounds), the colours, the opacity slider, `- f +` (font size, `f` cycles the font), the plants, the padlock. Under the bird: its name, which opens the bird picker.
+- **The bar**, left to right: the treat (a cucumber slice for a bird, a bone for Rori; drag it onto the companion), companion stays when locked, companion opacity, sound (click = on/off, hover = volume and how often the bird makes idle sounds), the seven colours (white included since 2.1.0), the opacity slider, `- f +` (font size, `f` cycles the font), the plants, the padlock. Under the companion: its name, which opens the picker.
 - **Font size**: `Ctrl+=` / `Ctrl+-` (11 to 28).
 - **Size**: the note grows to the left and down as you type. Drag the bottom-right corner to set a minimum size; click the corner once to go back to auto-size.
 - **The dot**: start dragging the note and a red dot appears in the top-right corner of the monitor. Drop the note on it and the note tucks into the dot. Double-click the dot to pop the note back out. The dot remembers where you last left it.
 - **Closing**: drag the dot and a dark X appears in the bottom-right corner. Drop the dot on it and everything is hidden; only the tray icon stays. Left-click the tray icon to get the note back.
 - **The tray menu**: Show note, Tuck into the dot, Start the dot, Lock/Unlock, Start with Windows, Quit.
 
-## The bird
+## The companions
 
-Two birds live in the app: **Lennie** the budgie and **Meggie** the owl. Click the name under the bird to switch, or rename them. The bird sits on the bar while you edit, flies off when you lock (or stays, if you tell it to), carries the note when you drag it, loses its grip if you yank it, and now and then blinks, preens, walks along the edge or pecks seeds. Click it and it hops; bug it five times and it flies off for a second.
+Three companions live in the app: **Lennie** the budgie, **Meggie** the owl and, since 2.1.0, **Rori** the Japanese spitz. Click the name under the companion to switch, or rename them. The bird sits on the bar while you edit, flies off when you lock (or stays, if you tell it to), carries the note when you drag it, loses its grip if you yank it, and now and then blinks, preens, walks along the edge or pecks seeds. Click it and it hops; bug it five times and it flies off for a second.
 
-**The sound.** Every five minutes the bird makes a quiet chirp. That keeps Bluetooth headphones from going to sleep during long silent stretches, which is why the feature exists. Hover over the speaker on the bar to set the volume (the default is 10 %) and whether the idle sounds are a chirp, a feather ruffle or both, and how often. Click the speaker to turn all sound off. Sound needs Windows Media Player, which Windows includes; on a Windows "N" edition install the Media Feature Pack, otherwise the bird is simply silent.
+**Rori** never flies. She runs in from the side of the screen and skids to a stop on the bar, sprints off sideways when you lock, and when you drag the note she runs after her spot, facing the pull, sitting down to wag when you hold still (yank it and she tumbles behind, then runs back). Left alone she wags, play-bows, does zoomies along the note's edge, and after three quiet minutes lies down for a nap with little z's. Her treat is a bone biscuit: pick it up and she sits up begging until you drop it on her. Click her and she bounces with a tiny "hm?"; from the third click she barks; typing makes her sniff for kibble. Her sounds are a soft "wuf", a "yip-yip", a growl, and the ear-flapping shake-off.
+
+**The sound.** Every five minutes the bird makes a quiet chirp. That keeps Bluetooth headphones from going to sleep during long silent stretches, which is why the feature exists. Hover over the speaker on the bar to set the volume (the default is 10 %) and whether the idle sounds are a chirp, a ruffle or both (for Rori: a wuf, a shake or both), and how often. Click the speaker to turn all sound off. Sound needs Windows Media Player, which Windows includes; on a Windows "N" edition install the Media Feature Pack, otherwise the companion is simply silent.
 
 ## Where your note lives
 
-`%APPDATA%\Task Focuser\state.json` holds the text, position, colour, opacity, font, lock state and the bird settings. Delete the file to start from scratch. The generated sounds are cached in `%LOCALAPPDATA%\Task Focuser\sounds`.
+`%APPDATA%\Task Focuser\state.json` holds the text, position, colour, opacity, font, lock state and the companion settings. Delete the file to start from scratch. The generated sounds are cached in `%LOCALAPPDATA%\Task Focuser\sounds`.
 
 ## Command line
 
@@ -53,7 +55,7 @@ That produces `app\dist\TaskFocuser.exe`. Without `-SelfContained` you get the s
 
 ## How it was made
 
-The app was built in one day, 2026-11-04, in five rounds by crews of Claude agents working from the specs in `docs/` (`SPEC.md` for the base, `SPEC-round2.md` to `SPEC-round5.md` for the bird and everything after), with the reasons behind each design call in `context/decisions.md`. It replaced a small Python sticky note (tag `v1.0.0` in this repo) and reads that app's state file unchanged.
+The app was built in one day, 2026-11-04, in five rounds by crews of Claude agents working from the specs in `docs/` (`SPEC.md` for the base, `SPEC-round2.md` to `SPEC-round5.md` for the bird and everything after, `SPEC-round6.md` for Rori, added the next evening), with the reasons behind each design call in `context/decisions.md`. It replaced a small Python sticky note (tag `v1.0.0` in this repo) and reads that app's state file unchanged.
 
 ## License
 

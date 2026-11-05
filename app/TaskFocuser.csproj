@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -11,7 +11,7 @@
     <RootNamespace>TaskFocuser</RootNamespace>
     <ApplicationIcon Condition="Exists('Assets\monster.ico')">Assets\monster.ico</ApplicationIcon>
     <ApplicationManifest Condition="Exists('app.manifest')">app.manifest</ApplicationManifest>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Product>Task Focuser</Product>
     <Authors>Jiri Kuldanek</Authors>
     <Company>Jiri Kuldanek</Company>

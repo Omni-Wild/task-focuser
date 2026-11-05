@@ -130,6 +130,8 @@ public sealed partial class Conductor
 
     void OnCucumberDropped(Point p)
     {
+        // Round 6 (2.3): the begging ends first, so a dog that was begging eats and one that was missed sits down.
+        EndBegging();
         // A bird away or mid-shove gets nothing; the note lets the slice fall by itself.
         if (busy || switching) return;   // round 5: nor a bird mid-switch
         if (monster.IsOut && monster.Contains(p)) monster.Eat();

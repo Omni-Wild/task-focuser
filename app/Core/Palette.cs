@@ -2,7 +2,7 @@ using System.Windows.Media;
 
 namespace TaskFocuser.Core;
 
-/// <summary>The five colours, the five fonts and the limits. The only place these live.</summary>
+/// <summary>The seven colours (White since round 6), the five fonts and the limits. The only place these live.</summary>
 public static class Palette
 {
     public sealed record Swatch(string Name, string Hex);
@@ -15,6 +15,7 @@ public static class Palette
         new("Mint",   "#C4F0C9"),
         new("Sky",    "#BFE3FF"),
         new("Grey",   "#E3E1DC"),
+        new("White",  "#FAFAF8"),
     };
 
     /// <summary>All ship with Windows 11.</summary>
