@@ -27,7 +27,9 @@ public static class CaptureWindows {
         EnumWindows((h, p) => {
             uint id; GetWindowThreadProcessId(h, out id);
             if (id == processId && IsWindowVisible(h)) {
-                Rect r; GetWindowRect(h, out r); var title = new StringBuilder(512);
+                Rect r; GetWindowRect(h, out r);
+                if (r.Right <= r.Left || r.Bottom <= r.Top) return true;
+                var title = new StringBuilder(512);
                 GetWindowText(h, title, title.Capacity);
                 lines.Add(String.Format("{0}: {1},{2} {3}x{4} {5}", h, r.Left, r.Top, r.Right-r.Left, r.Bottom-r.Top, title));
             }
@@ -72,14 +74,35 @@ if (Test-Path -LiteralPath $originalState) { throw "Refusing to overwrite existi
 $runKey = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Task Focuser' -ErrorAction SilentlyContinue
 if ($null -ne $runKey) { throw 'Refusing to launch WPF with an existing Task Focuser startup entry' }
 $rustState = Join-Path $dataDir "state.$profile.json"
+# This background is confined to the disposable runner session, never system wallpaper.
+$backgroundCode = @'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$form = New-Object System.Windows.Forms.Form
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+$form.WindowState = [System.Windows.Forms.FormWindowState]::Maximized
+$form.BackColor = [System.Drawing.Color]::Black
+$form.ShowInTaskbar = $false
+$form.TopMost = $true
+[System.Windows.Forms.Application]::Run($form)
+'@
+$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($backgroundCode))
+$background = Start-Process powershell.exe -ArgumentList '-NoProfile', '-STA', '-EncodedCommand', $encoded -PassThru
+Start-Sleep -Seconds 2
+if ($background.HasExited) { throw 'Could not start the isolated black background' }
 $metadata = @("Original commit: 67b0db11394ae1b265f11bfe013bea4631f8a9c8", "System DPI: $([CaptureWindows]::GetDpiForSystem())", "Virtual screen: $([System.Windows.Forms.SystemInformation]::VirtualScreen)", "Capture: GDI desktop composition, full virtual screen", "Original state: $originalState", "Rust state: $rustState")
 $metadata += "Windows: $([Environment]::OSVersion.VersionString)"
 $metadata += "Fonts: $(([System.Drawing.FontFamily]::Families | ForEach-Object Name) -join ', ')"
 $metadata | Set-Content (Join-Path $OutputDir 'metadata.txt')
 try {
-    foreach ($locked in @($true, $false)) {
-        $case = if ($locked) { 'locked' } else { 'unlocked' }
-        $fixture = @{ version = 2; text = "Focus on this`nThen this"; x = 100; y = 100; color = '#FFF59E'; opacity = 100; locked = $locked; font = 'Segoe UI'; fontSize = 16; mode = 'note'; startWithWindows = $false; birdStays = $true; soundOn = $false; plantsOn = $true; bird = 'lennie' } | ConvertTo-Json
+    foreach ($scenario in @(
+        @{ name = 'locked'; locked = $true; opacity = 100 },
+        @{ name = 'unlocked'; locked = $false; opacity = 100 },
+        @{ name = 'locked-50'; locked = $true; opacity = 50 }
+    )) {
+        $case = $scenario.name
+        $locked = $scenario.locked
+        $fixture = @{ version = 2; text = "Focus on this`nThen this"; x = 100; y = 100; color = '#FFF59E'; opacity = $scenario.opacity; locked = $locked; font = 'Segoe UI'; fontSize = 16; mode = 'note'; startWithWindows = $false; birdStays = $true; soundOn = $false; plantsOn = $true; bird = 'lennie' } | ConvertTo-Json
         foreach ($app in @('original', 'rust')) {
             $before = Join-Path $OutputDir "$case-$app-before.png"
             $after = Join-Path $OutputDir "$case-$app.png"
@@ -87,11 +110,11 @@ try {
             if ($app -eq 'original') {
                 $fixture | Set-Content -Encoding utf8 $originalState
                 Remove-Item Env:TASKFOCUSER_DATA_DIR -ErrorAction SilentlyContinue
-                $process = Start-Process -FilePath $Original -PassThru
+                $process = Start-Process -FilePath $Original -PassThru -RedirectStandardOutput (Join-Path $OutputDir "$case-$app-stdout.txt") -RedirectStandardError (Join-Path $OutputDir "$case-$app-stderr.txt")
             } else {
                 $fixture | Set-Content -Encoding utf8 $rustState
                 $env:TASKFOCUSER_DATA_DIR = $dataDir
-                $process = Start-Process -FilePath $Rust -ArgumentList '--no-tray', '--no-sound' -PassThru
+                $process = Start-Process -FilePath $Rust -ArgumentList '--no-tray', '--no-sound' -PassThru -RedirectStandardOutput (Join-Path $OutputDir "$case-$app-stdout.txt") -RedirectStandardError (Join-Path $OutputDir "$case-$app-stderr.txt")
             }
             try {
                 $windows = @()
@@ -100,7 +123,10 @@ try {
                     if ($process.HasExited) { throw "$app exited before its window appeared: $($process.ExitCode)" }
                     $windows = @([CaptureWindows]::Describe($process.Id))
                 }
-                if ($windows.Count -eq 0) { throw "$app has no visible window in the runner desktop" }
+                if ($windows.Count -eq 0) {
+                    Save-Screen $after
+                    throw "$app has no visible, nonempty window in the runner desktop; inspect the screenshot"
+                }
                 Start-Sleep -Seconds 3
                 Save-Screen $after
                 $changed = Changed-Pixels $before $after
@@ -113,6 +139,7 @@ try {
         }
     }
 } finally {
+    if (-not $background.HasExited) { Stop-Process -Id $background.Id -Force }
     Remove-Item -LiteralPath $originalState -Force -ErrorAction SilentlyContinue
     Remove-Item Env:TASKFOCUSER_DATA_DIR -ErrorAction SilentlyContinue
     Remove-Item Env:TASKFOCUSER_PROFILE -ErrorAction SilentlyContinue
